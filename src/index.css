@@ -65,12 +65,17 @@
 
 @layer components {
   .movie-card {
-    @apply relative group cursor-pointer rounded-lg overflow-hidden bg-card transition-all duration-300 hover:scale-105 hover:z-10;
+    @apply relative cursor-pointer rounded-lg overflow-hidden bg-card transition-all duration-300 hover:scale-105 hover:z-10;
   }
 
   .movie-card::before {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10;
+    @apply absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity duration-300 z-10;
+  }
+
+  /* Fixed: Don't use @apply with group utility */
+  .movie-card:hover::before {
+    opacity: 1;
   }
 
   .gradient-text {
