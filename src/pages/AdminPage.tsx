@@ -32,6 +32,16 @@ const AdminPage = () => {
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
+  
+  // Log the current authenticated state to debug
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      console.log('Auth session:', data, error);
+    };
+    
+    checkAuth();
+  }, []);
 
   // Fetch movies from database
   useEffect(() => {
@@ -104,6 +114,24 @@ const AdminPage = () => {
     });
   };
 
+  const validateYoutubeUrl = (url: string): string => {
+    // Convert standard YouTube URLs to embed format
+    if (url.includes('youtube.com/watch?v=')) {
+      const videoId = url.split('v=')[1].split('&')[0];
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    // If already an embed URL or another format, return as is
+    return url;
+  };
+
+  const validateImageUrl = (url: string): string => {
+    // Remove any [img] tags or other wrappers if present
+    if (url.includes('[img]')) {
+      return url.replace(/\[img\](.*?)\[\/img\]/g, '$1');
+    }
+    return url;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -121,12 +149,23 @@ const AdminPage = () => {
         });
         return;
       }
+      
+      // Validate and convert YouTube URL if needed
+      const processedVideoUrl = validateYoutubeUrl(formData.videoUrl);
+      const processedPosterUrl = validateImageUrl(formData.posterUrl);
+      
+      // Log the data we're about to submit
+      console.log('Submitting movie data:', {
+        ...formData,
+        videoUrl: processedVideoUrl,
+        posterUrl: processedPosterUrl
+      });
 
       const movieData = {
         title: formData.title,
         description: formData.description,
-        poster_url: formData.posterUrl,
-        video_url: formData.videoUrl,
+        poster_url: processedPosterUrl,
+        video_url: processedVideoUrl,
         genre: formData.genre,
         category: formData.category,
         duration: formData.duration,
@@ -140,6 +179,7 @@ const AdminPage = () => {
         .select();
 
       if (error) {
+        console.error('Supabase error details:', error);
         throw error;
       }
 
@@ -150,11 +190,11 @@ const AdminPage = () => {
 
       resetForm();
       fetchMovies();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading movie:', error);
       toast({
         title: 'Upload failed',
-        description: 'There was an error uploading your movie',
+        description: `There was an error uploading your movie: ${error.message || 'Unknown error'}`,
         variant: 'destructive'
       });
     } finally {
@@ -188,11 +228,11 @@ const AdminPage = () => {
       });
 
       fetchMovies();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting movie:', error);
       toast({
         title: 'Deletion failed',
-        description: 'There was an error deleting the movie',
+        description: `Error: ${error.message || 'Unknown error'}`,
         variant: 'destructive'
       });
     } finally {
@@ -325,6 +365,9 @@ const AdminPage = () => {
                         onChange={handleInputChange}
                         required 
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Direct image URL ending with .jpg, .png, etc.
+                      </p>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
@@ -332,11 +375,14 @@ const AdminPage = () => {
                       <Input 
                         id="videoUrl" 
                         type="url" 
-                        placeholder="https://youtube.com/embed/..." 
+                        placeholder="https://youtube.com/watch?v=xyz or https://youtube.com/embed/..."
                         value={formData.videoUrl}
                         onChange={handleInputChange}
                         required 
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        YouTube watch URLs will be converted to embed format automatically
+                      </p>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
@@ -347,7 +393,6 @@ const AdminPage = () => {
                         rows={4}
                         value={formData.description}
                         onChange={handleInputChange}
-                        required 
                       />
                     </div>
                   </div>
