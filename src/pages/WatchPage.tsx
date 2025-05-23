@@ -1,14 +1,74 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { movies } from '@/data/movies';
+import { supabase } from '@/integrations/supabase/client';
+import { Movie } from '@/types/movie';
+import { useToast } from '@/hooks/use-toast';
 
 const WatchPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [movie, setMovie] = useState<Movie | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  const movie = movies.find(m => m.id === id);
+  useEffect(() => {
+    const fetchMovie = async () => {
+      try {
+        setLoading(true);
+        
+        if (!id) return;
+        
+        const { data, error } = await supabase
+          .from('movies')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setMovie({
+            id: data.id,
+            title: data.title,
+            description: data.description || '',
+            posterUrl: data.poster_url,
+            videoUrl: data.video_url,
+            genre: data.genre,
+            category: data.category as any,
+            rating: data.rating,
+            duration: data.duration,
+            releaseYear: data.release_year
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching movie:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load movie details',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchMovie();
+  }, [id, toast]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p>Loading movie...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!movie) {
     return (
@@ -86,6 +146,9 @@ const WatchPage = () => {
                 src={movie.posterUrl}
                 alt={movie.title}
                 className="w-full rounded-lg shadow-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
               />
             </div>
           </div>
