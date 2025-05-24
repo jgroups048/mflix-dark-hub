@@ -4,6 +4,8 @@ import { useParams } from 'react-router-dom';
 import { Clock, Download, Play, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -37,48 +39,124 @@ interface RelatedMovie {
 
 const MovieDownloadPage = () => {
   const { id } = useParams();
+  const { toast } = useToast();
   const [movie, setMovie] = useState<MovieDownload | null>(null);
   const [relatedMovies, setRelatedMovies] = useState<RelatedMovie[]>([]);
   const [countdown, setCountdown] = useState<{ [key: string]: number }>({});
   const [showLinks, setShowLinks] = useState<{ [key: string]: boolean }>({});
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with actual API call
   useEffect(() => {
-    const mockMovie: MovieDownload = {
-      id: id || '1',
-      title: 'The Dark Knight',
-      releaseYear: 2008,
-      genre: 'Action, Crime, Drama',
-      language: 'English',
-      description: 'When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.',
-      posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=400&h=600&fit=crop',
-      rating: 9.0,
-      duration: '152 min',
-      downloadLinks: [
-        { quality: '480p', url: 'https://drive.google.com/file/d/example480p', size: '450 MB' },
-        { quality: '720p', url: 'https://drive.google.com/file/d/example720p', size: '850 MB' },
-        { quality: '1080p', url: 'https://drive.google.com/file/d/example1080p', size: '1.5 GB' }
-      ],
-      watchOnlineUrl: 'https://drive.google.com/file/d/examplewatch',
-      telegramChannel: 'https://t.me/mflixhub'
+    const fetchMovie = async () => {
+      try {
+        setLoading(true);
+        
+        if (!id) return;
+        
+        const { data, error } = await supabase
+          .from('movies')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching movie:', error);
+          // Fall back to mock data if database fails
+          loadMockData();
+          return;
+        }
+        
+        if (data) {
+          const movieData: MovieDownload = {
+            id: data.id,
+            title: data.title,
+            releaseYear: data.release_year,
+            genre: data.genre,
+            language: 'English', // Default language
+            description: data.description || '',
+            posterUrl: data.poster_url,
+            rating: data.rating,
+            duration: data.duration,
+            downloadLinks: [
+              { quality: '480p', url: 'https://drive.google.com/file/d/example480p', size: '450 MB' },
+              { quality: '720p', url: 'https://drive.google.com/file/d/example720p', size: '850 MB' },
+              { quality: '1080p', url: 'https://drive.google.com/file/d/example1080p', size: '1.5 GB' }
+            ],
+            watchOnlineUrl: data.video_url,
+            telegramChannel: 'https://t.me/mflixhub'
+          };
+          
+          setMovie(movieData);
+          
+          // Fetch related movies
+          const { data: relatedData } = await supabase
+            .from('movies')
+            .select('id, title, poster_url, release_year')
+            .neq('id', id)
+            .eq('category', data.category)
+            .limit(6);
+            
+          if (relatedData) {
+            setRelatedMovies(relatedData.map(m => ({
+              id: m.id,
+              title: m.title,
+              posterUrl: m.poster_url,
+              releaseYear: m.release_year
+            })));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching movie:', error);
+        loadMockData();
+      } finally {
+        setLoading(false);
+      }
     };
+    
+    const loadMockData = () => {
+      // Fallback mock data
+      const mockMovie: MovieDownload = {
+        id: id || '1',
+        title: 'The Dark Knight',
+        releaseYear: 2008,
+        genre: 'Action, Crime, Drama',
+        language: 'English',
+        description: 'When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.',
+        posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=400&h=600&fit=crop',
+        rating: 9.0,
+        duration: '152 min',
+        downloadLinks: [
+          { quality: '480p', url: 'https://drive.google.com/file/d/example480p', size: '450 MB' },
+          { quality: '720p', url: 'https://drive.google.com/file/d/example720p', size: '850 MB' },
+          { quality: '1080p', url: 'https://drive.google.com/file/d/example1080p', size: '1.5 GB' }
+        ],
+        watchOnlineUrl: 'https://drive.google.com/file/d/examplewatch',
+        telegramChannel: 'https://t.me/mflixhub'
+      };
 
-    const mockRelatedMovies: RelatedMovie[] = [
-      { id: '2', title: 'Batman Begins', posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=200&h=300&fit=crop', releaseYear: 2005 },
-      { id: '3', title: 'The Dark Knight Rises', posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=200&h=300&fit=crop', releaseYear: 2012 },
-      { id: '4', title: 'Joker', posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=200&h=300&fit=crop', releaseYear: 2019 },
-      { id: '5', title: 'Spider-Man', posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=200&h=300&fit=crop', releaseYear: 2021 }
-    ];
+      const mockRelatedMovies: RelatedMovie[] = [
+        { id: '2', title: 'Batman Begins', posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=200&h=300&fit=crop', releaseYear: 2005 },
+        { id: '3', title: 'The Dark Knight Rises', posterUrl: 'https://images.unsplash.com/photo-1489599904472-06651c42716e?w=200&h=300&fit=crop', releaseYear: 2012 },
+      ];
 
-    setMovie(mockMovie);
-    setRelatedMovies(mockRelatedMovies);
+      setMovie(mockMovie);
+      setRelatedMovies(mockRelatedMovies);
+    };
+    
+    fetchMovie();
   }, [id]);
 
   const handleDownloadClick = (quality: string, url: string) => {
-    // Track click
     console.log(`Download clicked: ${quality}`);
     
-    // Start countdown
+    // Track click event
+    if (window.gtag) {
+      window.gtag('event', 'download_click', {
+        movie_title: movie?.title,
+        quality: quality
+      });
+    }
+    
     const countdownTime = 10;
     setCountdown(prev => ({ ...prev, [quality]: countdownTime }));
     
@@ -88,7 +166,6 @@ const MovieDownloadPage = () => {
         if (newCount <= 0) {
           clearInterval(timer);
           setShowLinks(prevLinks => ({ ...prevLinks, [quality]: true }));
-          // Open the download link
           window.open(url, '_blank');
           return { ...prev, [quality]: 0 };
         }
@@ -99,13 +176,34 @@ const MovieDownloadPage = () => {
 
   const handleWatchOnline = (url: string) => {
     console.log('Watch online clicked');
+    
+    // Track watch event
+    if (window.gtag) {
+      window.gtag('event', 'watch_online', {
+        movie_title: movie?.title
+      });
+    }
+    
     window.open(url, '_blank');
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
   if (!movie) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-xl">Loading...</div>
-    </div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Movie Not Found</h1>
+          <Button onClick={() => window.location.href = '/'}>Go Back Home</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -120,7 +218,6 @@ const MovieDownloadPage = () => {
         <meta property="og:image" content={movie.posterUrl} />
         <meta property="og:type" content="video.movie" />
         
-        {/* Schema.org structured data */}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -152,6 +249,9 @@ const MovieDownloadPage = () => {
                 src={movie.posterUrl}
                 alt={movie.title}
                 className="w-full max-w-md mx-auto rounded-lg shadow-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
               />
             </div>
 
@@ -183,7 +283,6 @@ const MovieDownloadPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Download Buttons */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {movie.downloadLinks.map((link) => (
                       <div key={link.quality} className="space-y-2">
@@ -219,7 +318,6 @@ const MovieDownloadPage = () => {
                       </div>
                     ))}
                     
-                    {/* Watch Online Button */}
                     <Button
                       onClick={() => handleWatchOnline(movie.watchOnlineUrl)}
                       variant="secondary"
@@ -255,34 +353,39 @@ const MovieDownloadPage = () => {
           </Card>
 
           {/* Related Movies */}
-          <section>
-            <h2 className="text-2xl font-bold mb-6">Related Movies</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {relatedMovies.map((relatedMovie) => (
-                <Card
-                  key={relatedMovie.id}
-                  className="cursor-pointer hover:scale-105 transition-transform duration-200"
-                  onClick={() => window.location.href = `/download/${relatedMovie.id}`}
-                >
-                  <div className="aspect-[2/3] relative overflow-hidden rounded-t-lg">
-                    <img
-                      src={relatedMovie.posterUrl}
-                      alt={relatedMovie.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <CardContent className="p-3">
-                    <h3 className="font-semibold text-sm line-clamp-2 mb-1">
-                      {relatedMovie.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {relatedMovie.releaseYear}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
+          {relatedMovies.length > 0 && (
+            <section>
+              <h2 className="text-2xl font-bold mb-6">Related Movies</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {relatedMovies.map((relatedMovie) => (
+                  <Card
+                    key={relatedMovie.id}
+                    className="cursor-pointer hover:scale-105 transition-transform duration-200"
+                    onClick={() => window.location.href = `/download/${relatedMovie.id}`}
+                  >
+                    <div className="aspect-[2/3] relative overflow-hidden rounded-t-lg">
+                      <img
+                        src={relatedMovie.posterUrl}
+                        alt={relatedMovie.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                    <CardContent className="p-3">
+                      <h3 className="font-semibold text-sm line-clamp-2 mb-1">
+                        {relatedMovie.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {relatedMovie.releaseYear}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
         </main>
 
         <Footer />
