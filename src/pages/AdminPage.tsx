@@ -33,11 +33,24 @@ const AdminPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
   
-  // Log the current authenticated state to debug
+  // Enhanced authentication debugging
   useEffect(() => {
     const checkAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      console.log('Auth session:', data, error);
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        console.log('=== AUTHENTICATION DEBUG ===');
+        console.log('Session data:', sessionData);
+        console.log('Session error:', sessionError);
+        console.log('User data:', userData);
+        console.log('User error:', userError);
+        console.log('Is authenticated:', !!sessionData?.session?.user);
+        console.log('User ID:', sessionData?.session?.user?.id || 'No user ID');
+        console.log('===========================');
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
     };
     
     checkAuth();
@@ -138,10 +151,21 @@ const AdminPage = () => {
     try {
       setLoading(true);
       
+      console.log('=== MOVIE UPLOAD DEBUG START ===');
+      
+      // Check authentication status before upload
+      const { data: authData, error: authError } = await supabase.auth.getSession();
+      console.log('Pre-upload auth check:', {
+        hasSession: !!authData?.session,
+        userId: authData?.session?.user?.id,
+        authError
+      });
+      
       // Validate form data
       if (!formData.title || !formData.category || !formData.genre ||
           !formData.releaseYear || !formData.duration || !formData.rating ||
           !formData.posterUrl || !formData.videoUrl) {
+        console.log('Form validation failed - missing required fields');
         toast({
           title: 'Missing fields',
           description: 'Please fill all required fields',
@@ -150,15 +174,18 @@ const AdminPage = () => {
         return;
       }
       
-      // Validate and convert YouTube URL if needed
+      // Validate and convert URLs
       const processedVideoUrl = validateYoutubeUrl(formData.videoUrl);
       const processedPosterUrl = validateImageUrl(formData.posterUrl);
       
-      // Log the data we're about to submit
-      console.log('Submitting movie data:', {
-        ...formData,
-        videoUrl: processedVideoUrl,
-        posterUrl: processedPosterUrl
+      console.log('Original URLs:', {
+        originalVideoUrl: formData.videoUrl,
+        originalPosterUrl: formData.posterUrl
+      });
+      
+      console.log('Processed URLs:', {
+        processedVideoUrl,
+        processedPosterUrl
       });
 
       const movieData = {
@@ -173,15 +200,32 @@ const AdminPage = () => {
         release_year: parseInt(formData.releaseYear)
       };
 
-      const { data, error } = await supabase
+      console.log('Final movie data to insert:', movieData);
+
+      const { data: insertResult, error: insertError } = await supabase
         .from('movies')
         .insert([movieData])
         .select();
 
-      if (error) {
-        console.error('Supabase error details:', error);
-        throw error;
+      console.log('Insert operation result:', {
+        success: !insertError,
+        data: insertResult,
+        error: insertError
+      });
+
+      if (insertError) {
+        console.error('=== SUPABASE INSERT ERROR ===');
+        console.error('Error code:', insertError.code);
+        console.error('Error message:', insertError.message);
+        console.error('Error details:', insertError.details);
+        console.error('Error hint:', insertError.hint);
+        console.error('=============================');
+        throw insertError;
       }
+
+      console.log('=== UPLOAD SUCCESS ===');
+      console.log('Inserted movie data:', insertResult);
+      console.log('======================');
 
       toast({
         title: 'Success!',
@@ -190,8 +234,16 @@ const AdminPage = () => {
 
       resetForm();
       fetchMovies();
+      
+      console.log('=== MOVIE UPLOAD DEBUG END ===');
     } catch (error: any) {
-      console.error('Error uploading movie:', error);
+      console.error('=== UPLOAD ERROR DETAILS ===');
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Full error object:', error);
+      console.error('============================');
+      
       toast({
         title: 'Upload failed',
         description: `There was an error uploading your movie: ${error.message || 'Unknown error'}`,
