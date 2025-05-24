@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Clock, Download, Play, Users } from 'lucide-react';
+import { Clock, Download, Play, Users, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +44,45 @@ const MovieDownloadPage = () => {
   const [countdown, setCountdown] = useState<{ [key: string]: number }>({});
   const [showLinks, setShowLinks] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState(true);
+  const [visitCount, setVisitCount] = useState(0);
+
+  // Track page visit on load
+  useEffect(() => {
+    if (id) {
+      trackPageVisit('page_view', { movie_id: id });
+      fetchVisitCount();
+    }
+  }, [id]);
+
+  const trackPageVisit = async (event_type: string, metadata: any = {}) => {
+    try {
+      await supabase
+        .from('analytics')
+        .insert([{
+          event_type,
+          metadata,
+          timestamp: new Date().toISOString()
+        }]);
+    } catch (error) {
+      console.error('Analytics tracking error:', error);
+    }
+  };
+
+  const fetchVisitCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('analytics')
+        .select('id')
+        .eq('event_type', 'page_view')
+        .eq('metadata->>movie_id', id);
+
+      if (!error && data) {
+        setVisitCount(data.length);
+      }
+    } catch (error) {
+      console.error('Error fetching visit count:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchMovie = async () => {
@@ -153,6 +192,13 @@ const MovieDownloadPage = () => {
       movie_title: movie?.title,
       quality: quality
     });
+
+    // Track in our analytics
+    trackPageVisit('download_click', { 
+      movie_id: id,
+      quality: quality,
+      movie_title: movie?.title 
+    });
     
     const countdownTime = 10;
     setCountdown(prev => ({ ...prev, [quality]: countdownTime }));
@@ -177,6 +223,12 @@ const MovieDownloadPage = () => {
     // Track watch event
     window.gtag?.('event', 'watch_online', {
       movie_title: movie?.title
+    });
+
+    // Track in our analytics
+    trackPageVisit('watch_online_click', { 
+      movie_id: id,
+      movie_title: movie?.title 
     });
     
     window.open(url, '_blank');
@@ -261,6 +313,12 @@ const MovieDownloadPage = () => {
                   <span>Duration: {movie.duration}</span>
                   <span>Language: {movie.language}</span>
                   <span>Rating: {movie.rating}/10</span>
+                  {visitCount > 0 && (
+                    <span className="flex items-center gap-1 text-primary">
+                      <Eye className="w-4 h-4" />
+                      {visitCount.toLocaleString()} views
+                    </span>
+                  )}
                 </div>
               </div>
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
 import MovieGrid from '@/components/MovieGrid';
+import DownloadSection from '@/components/DownloadSection';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/movie';
@@ -13,6 +14,25 @@ const HomePage = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  // Track page visit
+  useEffect(() => {
+    trackPageVisit('homepage_view');
+  }, []);
+
+  const trackPageVisit = async (event_type: string, metadata: any = {}) => {
+    try {
+      await supabase
+        .from('analytics')
+        .insert([{
+          event_type,
+          metadata,
+          timestamp: new Date().toISOString()
+        }]);
+    } catch (error) {
+      console.error('Analytics tracking error:', error);
+    }
+  };
 
   // Fetch movies from database
   useEffect(() => {
@@ -95,6 +115,24 @@ const HomePage = () => {
           />
         ) : (
           <>
+            {/* Download Sections */}
+            <DownloadSection 
+              title="🎬 Latest Movie Downloads"
+              contentType="movies"
+              limit={8}
+            />
+            <DownloadSection 
+              title="📺 Web Series Downloads"
+              contentType="webseries"
+              limit={8}
+            />
+            <DownloadSection 
+              title="⭐ Trending Downloads"
+              contentType="trending"
+              limit={8}
+            />
+
+            {/* Regular Movie Grids */}
             <MovieGrid
               title="Latest Releases"
               movies={moviesByCategory.latest}
