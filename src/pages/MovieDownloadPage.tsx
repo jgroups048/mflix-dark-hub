@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Clock, Download, Play, Users } from 'lucide-react';
@@ -150,12 +149,10 @@ const MovieDownloadPage = () => {
     console.log(`Download clicked: ${quality}`);
     
     // Track click event
-    if (window.gtag) {
-      window.gtag('event', 'download_click', {
-        movie_title: movie?.title,
-        quality: quality
-      });
-    }
+    window.gtag?.('event', 'download_click', {
+      movie_title: movie?.title,
+      quality: quality
+    });
     
     const countdownTime = 10;
     setCountdown(prev => ({ ...prev, [quality]: countdownTime }));
@@ -178,11 +175,9 @@ const MovieDownloadPage = () => {
     console.log('Watch online clicked');
     
     // Track watch event
-    if (window.gtag) {
-      window.gtag('event', 'watch_online', {
-        movie_title: movie?.title
-      });
-    }
+    window.gtag?.('event', 'watch_online', {
+      movie_title: movie?.title
+    });
     
     window.open(url, '_blank');
   };
