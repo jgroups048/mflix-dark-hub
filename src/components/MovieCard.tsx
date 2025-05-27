@@ -10,17 +10,21 @@ interface MovieCardProps {
 const MovieCard = ({ movie }: MovieCardProps) => {
   const navigate = useNavigate();
 
+  const handleClick = () => {
+    navigate(`/watch/${movie.id}`);
+  };
+
   return (
-    <div className="movie-card" onClick={() => navigate(`/watch/${movie.id}`)}>
+    <div className="movie-card group cursor-pointer" onClick={handleClick}>
       <div className="aspect-[2/3] relative">
         <img
           src={movie.posterUrl}
           alt={movie.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover rounded-lg"
         />
         
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
         
         {/* Play Button */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">

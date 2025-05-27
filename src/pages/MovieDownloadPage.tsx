@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, Download, Play, Users, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +38,7 @@ interface RelatedMovie {
 
 const MovieDownloadPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [movie, setMovie] = useState<MovieDownload | null>(null);
   const [relatedMovies, setRelatedMovies] = useState<RelatedMovie[]>([]);
@@ -220,7 +220,7 @@ const MovieDownloadPage = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Movie Not Found</h1>
-          <Button onClick={() => window.location.href = '/'}>Go Back Home</Button>
+          <Button onClick={() => navigate('/')}>Go Back Home</Button>
         </div>
       </div>
     );
@@ -387,7 +387,7 @@ const MovieDownloadPage = () => {
                   <Card
                     key={relatedMovie.id}
                     className="cursor-pointer hover:scale-105 transition-transform duration-200"
-                    onClick={() => window.location.href = `/download/${relatedMovie.id}`}
+                    onClick={() => navigate(`/download/${relatedMovie.id}`)}
                   >
                     <div className="aspect-[2/3] relative overflow-hidden rounded-t-lg">
                       <img
