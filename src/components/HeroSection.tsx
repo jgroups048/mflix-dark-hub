@@ -12,57 +12,67 @@ const HeroSection = ({ featuredMovie }: HeroSectionProps) => {
   const navigate = useNavigate();
 
   return (
-    <section className="relative h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-r from-black via-red-900/20 to-black">
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-red-900/10 to-black">
       {/* Background Image */}
       {featuredMovie && (
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
           style={{
             backgroundImage: `url(${featuredMovie.posterUrl})`,
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/50" />
         </div>
       )}
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 text-center max-w-4xl">
-        <div className="mb-8">
-          <img 
-            src="/lovable-uploads/d893c6d0-27f6-4587-b460-81767b56a0d4.png" 
-            alt="Mflix Logo" 
-            className="w-24 h-24 mx-auto mb-4 animate-pulse"
-          />
-          <h1 className="text-6xl md:text-8xl font-bold mb-4 animate-fade-in">
-            <span className="text-red-500 tracking-wider">MFLIX</span>
-          </h1>
-          <h2 className="text-2xl md:text-3xl font-semibold text-white mb-6 animate-fade-in">
+      {/* Main Content */}
+      <div className="relative z-10 container mx-auto px-4 text-center max-w-6xl">
+        {/* MFLIX Logo and Branding */}
+        <div className="mb-12">
+          <div className="mb-8">
+            <h1 className="text-7xl md:text-9xl font-bold mb-6 animate-fade-in">
+              <span className="text-red-500 tracking-wider drop-shadow-[0_0_30px_rgba(239,68,68,0.5)]">
+                MFLIX
+              </span>
+            </h1>
+          </div>
+          
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 animate-fade-in tracking-wide">
             ENTERTAINMENT HUB
           </h2>
+          
+          <p className="text-lg text-gray-300 mb-8 animate-fade-in italic">
+            Powered by J GROUPS
+          </p>
         </div>
         
-        <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed animate-fade-in">
-          Mflix is your one-stop entertainment hub bringing you the best of movies and web series across genres. 
-          Powered by J GROUPS, crafted for your binge-worthy moments.
-        </p>
+        {/* About Description */}
+        <div className="mb-12 max-w-4xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-200 leading-relaxed animate-fade-in">
+            Mflix is your one-stop entertainment hub for movies and web series. 
+            Crafted by J GROUPS to give you the best binge-worthy experience, 
+            with stunning visuals and modern UI.
+          </p>
+        </div>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-6 justify-center animate-fade-in">
           {featuredMovie && (
             <Button
               size="lg"
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold px-10 py-4 text-lg rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
               onClick={() => navigate(`/watch/${featuredMovie.id}`)}
             >
-              <Play className="w-5 h-5 mr-2" />
+              <Play className="w-6 h-6 mr-3" />
               Watch Now
             </Button>
           )}
           <Button 
             size="lg" 
             variant="outline" 
-            className="border-white text-white hover:bg-white hover:text-black font-semibold px-8 py-3"
+            className="border-2 border-white text-white hover:bg-white hover:text-black font-bold px-10 py-4 text-lg rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
           >
-            <Info className="w-5 h-5 mr-2" />
+            <Info className="w-6 h-6 mr-3" />
             More Info
           </Button>
         </div>

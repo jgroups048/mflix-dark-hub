@@ -1,3 +1,4 @@
 
 # Netlify SPA redirect rules for React Router
+# This fixes 404 errors on direct URL access for MFLIX Entertainment Hub
 /*    /index.html   200

@@ -17,7 +17,7 @@ const HomePage = () => {
 
   // Track page visit
   useEffect(() => {
-    console.log('Homepage visited');
+    console.log('MFLIX Homepage visited - Entertainment Hub');
   }, []);
 
   // Fetch movies from database
@@ -52,7 +52,7 @@ const HomePage = () => {
         console.error('Error fetching movies:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load movies',
+          description: 'Failed to load content from MFLIX database',
           variant: 'destructive'
         });
       } finally {
@@ -76,9 +76,8 @@ const HomePage = () => {
   const moviesByCategory = useMemo(() => {
     return {
       latest: filteredMovies.filter(movie => movie.category === 'latest'),
-      trending: filteredMovies.filter(movie => movie.category === 'trending'),
-      webseries: filteredMovies.filter(movie => movie.category === 'webseries'),
       movies: filteredMovies.filter(movie => movie.category === 'movies'),
+      webseries: filteredMovies.filter(movie => movie.category === 'webseries'),
       livetv: filteredMovies.filter(movie => movie.category === 'livetv'),
     };
   }, [filteredMovies]);
@@ -92,7 +91,10 @@ const HomePage = () => {
       <main className="pb-8">
         {loading ? (
           <div className="container mx-auto px-4 py-20 text-center text-gray-400">
-            <div className="animate-pulse">Loading your entertainment...</div>
+            <div className="animate-pulse">
+              <div className="text-xl mb-4">Loading MFLIX Entertainment...</div>
+              <div className="text-sm">Powered by J GROUPS</div>
+            </div>
           </div>
         ) : searchQuery ? (
           <MovieGrid
@@ -113,7 +115,7 @@ const HomePage = () => {
               limit={8}
             />
             <DownloadSection 
-              title="⭐ Trending Downloads"
+              title="⭐ Premium Collection"
               contentType="movies"
               limit={8}
             />
@@ -125,19 +127,14 @@ const HomePage = () => {
               id="latest"
             />
             <MovieGrid
-              title="Trending Now"
-              movies={moviesByCategory.trending}
-              id="trending"
+              title="Movies"
+              movies={moviesByCategory.movies}
+              id="movies"
             />
             <MovieGrid
               title="Web Series"
               movies={moviesByCategory.webseries}
               id="webseries"
-            />
-            <MovieGrid
-              title="Movies"
-              movies={moviesByCategory.movies}
-              id="movies"
             />
             <MovieGrid
               title="Live TV"
