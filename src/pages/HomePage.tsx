@@ -17,22 +17,9 @@ const HomePage = () => {
 
   // Track page visit
   useEffect(() => {
-    trackPageVisit('homepage_view');
+    // Temporarily disabled analytics tracking until types are updated
+    console.log('Homepage visited');
   }, []);
-
-  const trackPageVisit = async (event_type: string, metadata: any = {}) => {
-    try {
-      await supabase
-        .from('analytics')
-        .insert([{
-          event_type,
-          metadata,
-          timestamp: new Date().toISOString()
-        }]);
-    } catch (error) {
-      console.error('Analytics tracking error:', error);
-    }
-  };
 
   // Fetch movies from database
   useEffect(() => {

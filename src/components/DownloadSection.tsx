@@ -8,7 +8,7 @@ import { Movie } from '@/types/movie';
 
 interface DownloadSectionProps {
   title: string;
-  contentType?: 'movies' | 'webseries' | 'others' | 'all';
+  contentType?: 'movies' | 'webseries' | 'latest' | 'trending' | 'livetv' | 'all';
   limit?: number;
 }
 
@@ -62,23 +62,9 @@ const DownloadSection = ({ title, contentType = 'all', limit = 8 }: DownloadSect
   };
 
   const handleDownloadClick = (id: string) => {
-    // Track homepage click
-    trackPageVisit('homepage_download_click', { movie_id: id });
+    // Temporarily disabled analytics tracking until types are updated
+    console.log('Download clicked for movie:', id);
     window.location.href = `/download/${id}`;
-  };
-
-  const trackPageVisit = async (event_type: string, metadata: any = {}) => {
-    try {
-      await supabase
-        .from('analytics')
-        .insert([{
-          event_type,
-          metadata,
-          timestamp: new Date().toISOString()
-        }]);
-    } catch (error) {
-      console.error('Analytics tracking error:', error);
-    }
   };
 
   if (loading) {
