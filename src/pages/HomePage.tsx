@@ -17,7 +17,6 @@ const HomePage = () => {
 
   // Track page visit
   useEffect(() => {
-    // Temporarily disabled analytics tracking until types are updated
     console.log('Homepage visited');
   }, []);
 
@@ -85,15 +84,15 @@ const HomePage = () => {
   }, [filteredMovies]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       <Header onSearch={setSearchQuery} />
       
-      {!searchQuery && featuredMovie && <HeroSection featuredMovie={featuredMovie} />}
+      {!searchQuery && <HeroSection featuredMovie={featuredMovie} />}
       
       <main className="pb-8">
         {loading ? (
-          <div className="container mx-auto px-4 py-20 text-center text-muted-foreground">
-            Loading movies...
+          <div className="container mx-auto px-4 py-20 text-center text-gray-400">
+            <div className="animate-pulse">Loading your entertainment...</div>
           </div>
         ) : searchQuery ? (
           <MovieGrid
@@ -115,7 +114,7 @@ const HomePage = () => {
             />
             <DownloadSection 
               title="⭐ Trending Downloads"
-              contentType="trending"
+              contentType="movies"
               limit={8}
             />
 
