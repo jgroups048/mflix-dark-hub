@@ -1,16 +1,28 @@
 
-import { Facebook, Twitter, Youtube } from 'lucide-react';
+import { Facebook, Twitter, Youtube, Instagram } from 'lucide-react';
 
 const Footer = () => {
   return (
     <footer className="bg-card border-t border-border mt-16">
       <div className="container mx-auto px-4 py-8">
+        {/* About Section */}
+        <div className="mb-8 text-center">
+          <h3 className="text-xl font-bold gradient-text mb-4">About Entertainment HUB</h3>
+          <p className="text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Entertainment HUB is your go-to platform for premium web series, movies, and entertainment content. 
+            Brought to you by J GROUPS, we aim to deliver quality entertainment with a professional touch — 
+            accessible from anywhere.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo and Description */}
           <div className="md:col-span-1">
-            <h3 className="text-xl font-bold gradient-text mb-4">
-              Mflix Entertainment HUB
-            </h3>
+            <img 
+              src="/lovable-uploads/e95a9e32-94d3-4f3b-9789-7031f82934e0.png" 
+              alt="Mflix Logo" 
+              className="h-12 w-auto mb-4"
+            />
             <p className="text-muted-foreground text-sm">
               Your ultimate destination for movies, web series, and live TV streaming.
             </p>
@@ -42,13 +54,28 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4">Follow Us</h4>
             <div className="flex space-x-4">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a 
+                href="https://www.facebook.com/profile.php?id=61573079981019" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Twitter className="w-5 h-5" />
+              <a 
+                href="https://www.instagram.com/j_entertainmenthub.in?igsh=eTFrOHY4bmNnYmli" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a 
+                href="https://www.youtube.com/@Jgroupsentertainmenthub048" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
                 <Youtube className="w-5 h-5" />
               </a>
             </div>
@@ -56,7 +83,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 Mflix Entertainment HUB. All rights reserved.</p>
+          <p>&copy; 2024 Mflix Entertainment HUB. All rights reserved. Powered by J GROUPS.</p>
         </div>
       </div>
     </footer>
