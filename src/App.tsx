@@ -16,9 +16,15 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Check if splash has been shown in this session
+    const splashShown = sessionStorage.getItem('mflix-splash-shown');
+    return !splashShown;
+  });
 
   const handleSplashComplete = () => {
+    // Mark splash as shown for this session
+    sessionStorage.setItem('mflix-splash-shown', 'true');
     setShowSplash(false);
   };
 
