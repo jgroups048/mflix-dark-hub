@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Search, Menu, X } from 'lucide-react';
+import { Search, Menu, X, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
@@ -74,6 +74,13 @@ const Header = ({ onSearch }: HeaderProps) => {
             >
               Trending
             </button>
+            <button 
+              onClick={() => navigate('/admin')} 
+              className="text-white hover:text-red-500 transition-colors font-semibold flex items-center space-x-1"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Admin</span>
+            </button>
           </nav>
 
           {/* Search Bar */}
@@ -128,6 +135,13 @@ const Header = ({ onSearch }: HeaderProps) => {
                 className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
               >
                 Trending
+              </button>
+              <button 
+                onClick={() => { navigate('/admin'); setIsMenuOpen(false); }} 
+                className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2 flex items-center space-x-1"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Admin Panel</span>
               </button>
             </nav>
             

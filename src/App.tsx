@@ -9,6 +9,7 @@ import SplashScreen from "./components/SplashScreen";
 import HomePage from "./pages/HomePage";
 import WatchPage from "./pages/WatchPage";
 import MovieDownloadPage from "./pages/MovieDownloadPage";
+import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/watch/:id" element={<WatchPage />} />
             <Route path="/download/:id" element={<MovieDownloadPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </HashRouter>
