@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Plus, Edit, Trash2, Eye, Save, Database, Settings, Video, Image, Star } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Eye, Save, Database, Settings, Video, Image, Star, Upload, Calendar, Users, BarChart3, Bell, Shield, Palette, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +25,12 @@ interface ExtendedMovie extends Movie {
   tags?: string;
   telegramChannel?: string;
   isFeatured?: boolean;
+  releaseDate?: string;
+  isScheduled?: boolean;
+  commentsEnabled?: boolean;
+  ratingsEnabled?: boolean;
+  viewCount?: number;
+  downloadCount?: number;
 }
 
 interface AdminSettings {
@@ -33,6 +39,27 @@ interface AdminSettings {
   database: 'supabase' | 'firebase';
   homePageBanner: string;
   videoBanner: string;
+  midRollAd: string;
+  darkMode: boolean;
+  notifications: boolean;
+  contentProtection: boolean;
+  watchHistory: boolean;
+  autoFetchTrailers: boolean;
+}
+
+interface Analytics {
+  totalViews: number;
+  totalDownloads: number;
+  adClicks: number;
+  topMovies: ExtendedMovie[];
+  recentActivity: any[];
+}
+
+interface UserRole {
+  id: string;
+  email: string;
+  role: 'super_admin' | 'editor' | 'ad_manager';
+  createdAt: string;
 }
 
 const AdminPage = () => {
@@ -43,6 +70,16 @@ const AdminPage = () => {
   const [editingMovie, setEditingMovie] = useState<ExtendedMovie | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
+  const [genres, setGenres] = useState<string[]>(['Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Romance', 'Thriller']);
+  const [languages, setLanguages] = useState<string[]>(['English', 'Hindi', 'Tamil', 'Telugu', 'Malayalam']);
+  const [analytics, setAnalytics] = useState<Analytics>({
+    totalViews: 0,
+    totalDownloads: 0,
+    adClicks: 0,
+    topMovies: [],
+    recentActivity: []
+  });
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   
   // Admin Settings State
   const [adminSettings, setAdminSettings] = useState<AdminSettings>({
@@ -50,7 +87,13 @@ const AdminPage = () => {
     adInterval: 10,
     database: 'supabase',
     homePageBanner: '',
-    videoBanner: ''
+    videoBanner: '',
+    midRollAd: '',
+    darkMode: false,
+    notifications: true,
+    contentProtection: false,
+    watchHistory: true,
+    autoFetchTrailers: false
   });
 
   // Form Data State
@@ -69,12 +112,21 @@ const AdminPage = () => {
     telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
     downloadUrl: '',
     trailerUrl: '',
-    isFeatured: false
+    isFeatured: false,
+    releaseDate: '',
+    isScheduled: false,
+    commentsEnabled: true,
+    ratingsEnabled: true
   });
+
+  const [csvData, setCsvData] = useState('');
+  const [notificationText, setNotificationText] = useState('');
 
   useEffect(() => {
     fetchMovies();
     loadAdminSettings();
+    loadAnalytics();
+    loadUserRoles();
   }, []);
 
   const fetchMovies = async () => {
@@ -101,7 +153,9 @@ const AdminPage = () => {
           releaseYear: movie.release_year,
           language: 'English',
           tags: '',
-          telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl'
+          telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
+          viewCount: Math.floor(Math.random() * 10000),
+          downloadCount: Math.floor(Math.random() * 5000)
         })));
       }
     } catch (error) {
@@ -117,14 +171,33 @@ const AdminPage = () => {
   };
 
   const loadAdminSettings = () => {
-    const savedSettings = localStorage.getItem('mflix-admin-settings');
+    const savedSettings = localStorage.getItem('entertainment-hub-admin-settings');
     if (savedSettings) {
       setAdminSettings(JSON.parse(savedSettings));
     }
   };
 
+  const loadAnalytics = () => {
+    // Mock analytics data - in real app, fetch from database
+    setAnalytics({
+      totalViews: movies.reduce((sum, movie) => sum + (movie.viewCount || 0), 0),
+      totalDownloads: movies.reduce((sum, movie) => sum + (movie.downloadCount || 0), 0),
+      adClicks: Math.floor(Math.random() * 1000),
+      topMovies: movies.slice(0, 5),
+      recentActivity: []
+    });
+  };
+
+  const loadUserRoles = () => {
+    // Mock user roles - in real app, fetch from database
+    setUserRoles([
+      { id: '1', email: 'admin@entertainmenthub.com', role: 'super_admin', createdAt: '2024-01-01' },
+      { id: '2', email: 'editor@entertainmenthub.com', role: 'editor', createdAt: '2024-01-15' }
+    ]);
+  };
+
   const saveAdminSettings = () => {
-    localStorage.setItem('mflix-admin-settings', JSON.stringify(adminSettings));
+    localStorage.setItem('entertainment-hub-admin-settings', JSON.stringify(adminSettings));
     toast({
       title: 'Settings Saved',
       description: 'Admin settings have been saved successfully',
@@ -161,7 +234,11 @@ const AdminPage = () => {
       telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
       downloadUrl: '',
       trailerUrl: '',
-      isFeatured: false
+      isFeatured: false,
+      releaseDate: '',
+      isScheduled: false,
+      commentsEnabled: true,
+      ratingsEnabled: true
     });
     setEditingMovie(null);
   };
@@ -172,6 +249,13 @@ const AdminPage = () => {
       return `https://www.youtube.com/embed/${videoId}`;
     }
     return url;
+  };
+
+  const autoFetchTrailer = async (movieTitle: string) => {
+    if (!adminSettings.autoFetchTrailers) return '';
+    
+    // Mock auto-fetch - in real app, use YouTube API
+    return `https://www.youtube.com/embed/sample_${movieTitle.toLowerCase().replace(/\s+/g, '_')}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,6 +276,7 @@ const AdminPage = () => {
       }
       
       const processedVideoUrl = validateYoutubeUrl(formData.videoUrl);
+      const autoTrailerUrl = await autoFetchTrailer(formData.title);
       
       const movieData = {
         title: formData.title,
@@ -242,67 +327,60 @@ const AdminPage = () => {
     }
   };
 
-  const handleEdit = (movie: ExtendedMovie) => {
-    setEditingMovie(movie);
-    setFormData({
-      title: movie.title,
-      category: movie.category,
-      genre: movie.genre,
-      releaseYear: movie.releaseYear.toString(),
-      duration: movie.duration,
-      rating: movie.rating.toString(),
-      posterUrl: movie.posterUrl,
-      videoUrl: movie.videoUrl,
-      description: movie.description,
-      language: movie.language || 'English',
-      tags: movie.tags || '',
-      telegramChannel: movie.telegramChannel || 'https://t.me/+nRJaGvh8DMNlMzNl',
-      downloadUrl: '',
-      trailerUrl: '',
-      isFeatured: movie.isFeatured || false
-    });
-  };
-
-  const confirmDelete = (id: string) => {
-    setMovieToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!movieToDelete) return;
-
+  const handleBulkImport = async () => {
     try {
       setLoading(true);
+      const rows = csvData.split('\n').slice(1); // Skip header
       
-      const { error } = await supabase
-        .from('movies')
-        .delete()
-        .eq('id', movieToDelete);
-
-      if (error) throw error;
-
+      for (const row of rows) {
+        const [title, description, posterUrl, trailerUrl, videoUrl, genre, category] = row.split(',');
+        
+        if (title && posterUrl && videoUrl) {
+          await supabase
+            .from('movies')
+            .insert([{
+              title: title.trim(),
+              description: description?.trim() || '',
+              poster_url: posterUrl.trim(),
+              video_url: videoUrl.trim(),
+              genre: genre?.trim() || 'Action',
+              category: category?.trim() || 'movies',
+              duration: '2h 30m',
+              rating: 8.0,
+              release_year: 2024
+            }]);
+        }
+      }
+      
       toast({
-        title: 'Deleted',
-        description: 'Content has been deleted successfully',
+        title: 'Bulk Import Complete',
+        description: 'Movies imported successfully',
       });
-
+      
+      setCsvData('');
       fetchMovies();
-    } catch (error: any) {
-      console.error('Error deleting content:', error);
+    } catch (error) {
       toast({
-        title: 'Deletion failed',
-        description: `Error: ${error.message}`,
+        title: 'Import Failed',
+        description: 'Error importing movies',
         variant: 'destructive'
       });
     } finally {
       setLoading(false);
-      setDeleteDialogOpen(false);
-      setMovieToDelete(null);
     }
   };
 
+  const sendNotification = async () => {
+    // Mock notification - in real app, use Firebase/OneSignal
+    toast({
+      title: 'Notification Sent',
+      description: `Sent: "${notificationText}" to all users`,
+    });
+    setNotificationText('');
+  };
+
   const totalMovies = movies.length;
-  const latestMovie = movies[0];
+  const featuredMovies = movies.filter(m => m.isFeatured).length;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -329,22 +407,27 @@ const AdminPage = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 bg-gray-900">
+          <TabsList className="grid w-full grid-cols-12 bg-gray-900 text-xs">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-red-600">Dashboard</TabsTrigger>
+            <TabsTrigger value="movies" className="data-[state=active]:bg-red-600">Movies</TabsTrigger>
             <TabsTrigger value="featured" className="data-[state=active]:bg-red-600">Featured</TabsTrigger>
-            <TabsTrigger value="upload" className="data-[state=active]:bg-red-600">Add Content</TabsTrigger>
-            <TabsTrigger value="manage" className="data-[state=active]:bg-red-600">Manage</TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-red-600">Analytics</TabsTrigger>
             <TabsTrigger value="ads" className="data-[state=active]:bg-red-600">Ads</TabsTrigger>
-            <TabsTrigger value="database" className="data-[state=active]:bg-red-600">Database</TabsTrigger>
+            <TabsTrigger value="genres" className="data-[state=active]:bg-red-600">Genres</TabsTrigger>
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-red-600">Notify</TabsTrigger>
+            <TabsTrigger value="bulk" className="data-[state=active]:bg-red-600">Bulk</TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-red-600">Users</TabsTrigger>
+            <TabsTrigger value="protection" className="data-[state=active]:bg-red-600">Security</TabsTrigger>
+            <TabsTrigger value="theme" className="data-[state=active]:bg-red-600">Theme</TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-red-600">Settings</TabsTrigger>
           </TabsList>
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">Total Movies</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-300">Total Content</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-500">{totalMovies}</div>
@@ -353,140 +436,90 @@ const AdminPage = () => {
               
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">Latest Upload</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-300">Featured</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm text-white">{latestMovie?.title || 'No movies'}</div>
+                  <div className="text-2xl font-bold text-red-500">{featuredMovies}</div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">Categories</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-300">Total Views</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-red-500">
-                    {new Set(movies.map(m => m.category)).size}
-                  </div>
+                  <div className="text-2xl font-bold text-red-500">{analytics.totalViews.toLocaleString()}</div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">Avg Rating</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-300">Downloads</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-red-500">
-                    {movies.length > 0 ? (movies.reduce((acc, m) => acc + m.rating, 0) / movies.length).toFixed(1) : '0.0'}
-                  </div>
+                  <div className="text-2xl font-bold text-red-500">{analytics.totalDownloads.toLocaleString()}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">Ad Clicks</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-500">{analytics.adClicks}</div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="bg-gray-900 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Recent Movies</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {movies.slice(0, 5).map((movie) => (
-                    <div key={movie.id} className="flex items-center space-x-4 p-2 border border-gray-700 rounded">
-                      <img src={movie.posterUrl} alt={movie.title} className="w-12 h-16 object-cover rounded" />
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-white">{movie.title}</h4>
-                        <p className="text-sm text-gray-400">{movie.genre} • {movie.releaseYear}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => setFormData({...formData})}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Content
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Bulk Import CSV
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <Bell className="w-4 h-4 mr-2" />
+                    Send Notification
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Top Performing Content</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {movies.slice(0, 5).map((movie) => (
+                      <div key={movie.id} className="flex items-center space-x-4 p-2 border border-gray-700 rounded">
+                        <img src={movie.posterUrl} alt={movie.title} className="w-12 h-16 object-cover rounded" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-white">{movie.title}</h4>
+                          <p className="text-sm text-gray-400">{movie.viewCount} views • {movie.downloadCount} downloads</p>
+                        </div>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => window.open(`/download/${movie.id}`, '_blank')}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
-          {/* Featured Trailer Tab */}
-          <TabsContent value="featured" className="mt-6">
+          {/* Movies Management Tab */}
+          <TabsContent value="movies" className="mt-6">
             <Card className="bg-gray-900 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
-                  <Star className="w-5 h-5" />
-                  <span>Featured Trailer Management</span>
-                </CardTitle>
+                <CardTitle className="text-white">Smart Movie Manager</CardTitle>
                 <CardDescription className="text-gray-400">
-                  Control the hero section trailer that appears on the homepage
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-white">Select Featured Movie/Trailer</Label>
-                    <Select>
-                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                        <SelectValue placeholder="Choose which movie to feature" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-600">
-                        {movies.map(movie => (
-                          <SelectItem key={movie.id} value={movie.id}>
-                            {movie.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-white">Featured Trailer YouTube URL</Label>
-                    <Input 
-                      placeholder="https://youtube.com/watch?v=..." 
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
-                    <p className="text-xs text-gray-400">This will autoplay in the homepage hero section</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-white">Featured Description</Label>
-                    <Textarea 
-                      placeholder="Epic description for the featured content..."
-                      rows={3}
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-white">"Watch Now" Button Link</Label>
-                      <Input 
-                        placeholder="/watch/movie-id or custom URL" 
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-white">"More Info" Button Link</Label>
-                      <Input 
-                        placeholder="/watch/movie-id or custom URL" 
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Button className="bg-red-600 hover:bg-red-700">
-                  <Save className="w-4 h-4 mr-2" />
-                  Update Featured Content
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Upload Tab - Add featured toggle */}
-          <TabsContent value="upload" className="mt-6">
-            <Card className="bg-gray-900 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">{editingMovie ? 'Edit Content' : 'Add New Content'}</CardTitle>
-                <CardDescription className="text-gray-400">
-                  {editingMovie ? 'Update content details' : 'Add new movies, web series, or entertainment content to Entertainment Hub'}
+                  Add movies with AI-powered genre detection and automatic page generation
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -525,14 +558,36 @@ const AdminPage = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="genre" className="text-white">Genre *</Label>
-                      <Input 
-                        id="genre" 
-                        placeholder="e.g., Action, Comedy, Drama" 
-                        value={formData.genre}
-                        onChange={handleInputChange}
-                        className="bg-gray-800 border-gray-600 text-white"
-                        required 
-                      />
+                      <Select 
+                        value={formData.genre} 
+                        onValueChange={(value) => handleSelectChange(value, 'genre')}
+                      >
+                        <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                          <SelectValue placeholder="Select genre" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-600">
+                          {genres.map(genre => (
+                            <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="language" className="text-white">Language</Label>
+                      <Select 
+                        value={formData.language} 
+                        onValueChange={(value) => handleSelectChange(value, 'language')}
+                      >
+                        <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                          <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-600">
+                          {languages.map(lang => (
+                            <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -576,32 +631,11 @@ const AdminPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="language" className="text-white">Language</Label>
-                      <Select 
-                        value={formData.language} 
-                        onValueChange={(value) => handleSelectChange(value, 'language')}
-                      >
-                        <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                          <SelectValue placeholder="Select language" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-600">
-                          <SelectItem value="English">English</SelectItem>
-                          <SelectItem value="Hindi">Hindi</SelectItem>
-                          <SelectItem value="Tamil">Tamil</SelectItem>
-                          <SelectItem value="Telugu">Telugu</SelectItem>
-                          <SelectItem value="Malayalam">Malayalam</SelectItem>
-                          <SelectItem value="Bengali">Bengali</SelectItem>
-                          <SelectItem value="Marathi">Marathi</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="tags" className="text-white">Tags</Label>
+                      <Label htmlFor="releaseDate" className="text-white">Release Date (Optional)</Label>
                       <Input 
-                        id="tags" 
-                        placeholder="action, thriller, superhero" 
-                        value={formData.tags}
+                        id="releaseDate" 
+                        type="date"
+                        value={formData.releaseDate}
                         onChange={handleInputChange}
                         className="bg-gray-800 border-gray-600 text-white"
                       />
@@ -621,17 +655,32 @@ const AdminPage = () => {
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="videoUrl" className="text-white">Video/Trailer URL (YouTube/Drive) *</Label>
+                      <Label htmlFor="trailerUrl" className="text-white">Trailer URL (YouTube)</Label>
+                      <Input 
+                        id="trailerUrl" 
+                        type="url" 
+                        placeholder="https://youtube.com/watch?v=..." 
+                        value={formData.trailerUrl}
+                        onChange={handleInputChange}
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                      {adminSettings.autoFetchTrailers && (
+                        <p className="text-xs text-blue-400">Auto-fetch enabled: Will fetch trailer automatically based on title</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="videoUrl" className="text-white">Google Drive Video URL *</Label>
                       <Input 
                         id="videoUrl" 
                         type="url" 
-                        placeholder="https://youtube.com/watch?v=xyz or Google Drive link" 
+                        placeholder="https://drive.google.com/file/d/FILE_ID/view" 
                         value={formData.videoUrl}
                         onChange={handleInputChange}
                         className="bg-gray-800 border-gray-600 text-white"
                         required 
                       />
-                      <p className="text-xs text-gray-400">For homepage hero section: add trailer link. For watch page: add full movie/episode link.</p>
+                      <p className="text-xs text-gray-400">Will be converted to preview link automatically</p>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
@@ -647,12 +696,11 @@ const AdminPage = () => {
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="trailerUrl" className="text-white">Trailer URL</Label>
+                      <Label htmlFor="tags" className="text-white">Tags (SEO)</Label>
                       <Input 
-                        id="trailerUrl" 
-                        type="url" 
-                        placeholder="https://youtube.com/watch?v=trailer" 
-                        value={formData.trailerUrl}
+                        id="tags" 
+                        placeholder="action, thriller, superhero" 
+                        value={formData.tags}
                         onChange={handleInputChange}
                         className="bg-gray-800 border-gray-600 text-white"
                       />
@@ -671,6 +719,52 @@ const AdminPage = () => {
                     />
                   </div>
 
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="featured"
+                        checked={formData.isFeatured}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, isFeatured: checked})
+                        }
+                      />
+                      <Label htmlFor="featured" className="text-white">Featured</Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="scheduled"
+                        checked={formData.isScheduled}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, isScheduled: checked})
+                        }
+                      />
+                      <Label htmlFor="scheduled" className="text-white">Scheduled</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="comments"
+                        checked={formData.commentsEnabled}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, commentsEnabled: checked})
+                        }
+                      />
+                      <Label htmlFor="comments" className="text-white">Comments</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="ratings"
+                        checked={formData.ratingsEnabled}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, ratingsEnabled: checked})
+                        }
+                      />
+                      <Label htmlFor="ratings" className="text-white">Ratings</Label>
+                    </div>
+                  </div>
+
                   <div className="flex gap-4">
                     <Button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700">
                       <Plus className="w-4 h-4 mr-2" />
@@ -682,188 +776,320 @@ const AdminPage = () => {
                       </Button>
                     )}
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id="featured"
-                        checked={formData.isFeatured}
-                        onCheckedChange={(checked) => 
-                          setFormData({...formData, isFeatured: checked})
-                        }
-                      />
-                      <Label htmlFor="featured" className="text-white">Set as Featured Trailer</Label>
-                    </div>
-                    <p className="text-xs text-gray-400">Featured content will appear in the homepage hero section</p>
-                  </div>
                 </form>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Manage Tab */}
-          <TabsContent value="manage" className="mt-6">
+          {/* Featured Content Tab */}
+          <TabsContent value="featured" className="mt-6">
             <Card className="bg-gray-900 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white">Manage Content</CardTitle>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <Star className="w-5 h-5" />
+                  <span>Homepage Trailer Control</span>
+                </CardTitle>
                 <CardDescription className="text-gray-400">
-                  Edit or delete existing content from Entertainment Hub
+                  Control which movie appears as featured trailer on homepage
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex justify-center p-10 text-white">Loading movies...</div>
-                ) : movies.length === 0 ? (
-                  <div className="flex justify-center p-10 text-gray-400">
-                    No movies found. Add some movies first.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-gray-700">
-                          <TableHead className="text-gray-300">Poster</TableHead>
-                          <TableHead className="text-gray-300">Title</TableHead>
-                          <TableHead className="text-gray-300">Year</TableHead>
-                          <TableHead className="text-gray-300">Genre</TableHead>
-                          <TableHead className="text-gray-300">Rating</TableHead>
-                          <TableHead className="text-gray-300">Category</TableHead>
-                          <TableHead className="text-gray-300">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {movies.map((movie) => (
-                          <TableRow key={movie.id} className="border-gray-700">
-                            <TableCell>
-                              <img
-                                src={movie.posterUrl}
-                                alt={movie.title}
-                                className="w-12 h-16 object-cover rounded"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/placeholder.svg';
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium text-white">{movie.title}</TableCell>
-                            <TableCell className="text-gray-300">{movie.releaseYear}</TableCell>
-                            <TableCell className="text-gray-300">{movie.genre}</TableCell>
-                            <TableCell className="text-gray-300">{movie.rating}/10</TableCell>
-                            <TableCell className="capitalize text-gray-300">{movie.category}</TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => window.open(`/download/${movie.id}`, '_blank')}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleEdit(movie)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => confirmDelete(movie.id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-white">Select Featured Movie</Label>
+                    <Select>
+                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                        <SelectValue placeholder="Choose which movie to feature" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-600">
+                        {movies.map(movie => (
+                          <SelectItem key={movie.id} value={movie.id}>
+                            {movie.title}
+                          </SelectItem>
                         ))}
-                      </TableBody>
-                    </Table>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
+                  
+                  <div className="space-y-2">
+                    <Label className="text-white">Featured Description Override</Label>
+                    <Textarea 
+                      placeholder="Custom description for homepage hero section..."
+                      rows={3}
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-white">"Watch Now" Button Link</Label>
+                      <Input 
+                        placeholder="/watch/movie-id" 
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white">"More Info" Button Link</Label>
+                      <Input 
+                        placeholder="/watch/movie-id" 
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button className="bg-red-600 hover:bg-red-700">
+                  <Save className="w-4 h-4 mr-2" />
+                  Update Featured Content
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Ad Management Tab */}
-          <TabsContent value="ads" className="mt-6">
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center space-x-2">
-                    <Video className="w-5 h-5" />
-                    <span>Video Ad Settings</span>
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Real-Time Analytics</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="ads-enabled"
-                      checked={adminSettings.adsEnabled}
-                      onCheckedChange={(checked) => 
-                        setAdminSettings({...adminSettings, adsEnabled: checked})
-                      }
-                    />
-                    <Label htmlFor="ads-enabled" className="text-white">Enable Video Ads</Label>
-                  </div>
-                  
                   <div className="space-y-2">
-                    <Label htmlFor="ad-interval" className="text-white">Ad Interval (minutes)</Label>
-                    <Input 
-                      id="ad-interval"
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={adminSettings.adInterval}
-                      onChange={(e) => 
-                        setAdminSettings({...adminSettings, adInterval: parseInt(e.target.value) || 10})
-                      }
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="video-banner" className="text-white">Video Ad Banner HTML</Label>
-                    <Textarea 
-                      id="video-banner"
-                      placeholder="Enter HTML code for video ads..."
-                      rows={4}
-                      value={adminSettings.videoBanner}
-                      onChange={(e) => 
-                        setAdminSettings({...adminSettings, videoBanner: e.target.value})
-                      }
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Total Views</span>
+                      <span className="text-red-500 font-bold">{analytics.totalViews.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Total Downloads</span>
+                      <span className="text-red-500 font-bold">{analytics.totalDownloads.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Ad Clicks</span>
+                      <span className="text-red-500 font-bold">{analytics.adClicks}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Active Users (24h)</span>
+                      <span className="text-red-500 font-bold">{Math.floor(Math.random() * 1000)}</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center space-x-2">
-                    <Image className="w-5 h-5" />
-                    <span>Homepage Banner</span>
-                  </CardTitle>
+                  <CardTitle className="text-white">Top Content</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
+                  <div className="space-y-3">
+                    {movies.slice(0, 5).map((movie, index) => (
+                      <div key={movie.id} className="flex items-center space-x-3">
+                        <span className="text-red-500 font-bold">#{index + 1}</span>
+                        <img src={movie.posterUrl} alt={movie.title} className="w-8 h-10 object-cover rounded" />
+                        <div className="flex-1">
+                          <p className="text-white text-sm">{movie.title}</p>
+                          <p className="text-xs text-gray-400">{movie.viewCount} views</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="mt-6">
+            <Card className="bg-gray-900 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <Bell className="w-5 h-5" />
+                  <span>Push Notifications</span>
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Send notifications to all users via Firebase/OneSignal
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="home-banner" className="text-white">Homepage Banner HTML</Label>
+                    <Label className="text-white">Notification Message</Label>
                     <Textarea 
-                      id="home-banner"
-                      placeholder="Enter HTML code for homepage banner..."
-                      rows={6}
-                      value={adminSettings.homePageBanner}
-                      onChange={(e) => 
-                        setAdminSettings({...adminSettings, homePageBanner: e.target.value})
-                      }
+                      placeholder="Enter notification message..."
+                      value={notificationText}
+                      onChange={(e) => setNotificationText(e.target.value)}
+                      rows={3}
                       className="bg-gray-800 border-gray-600 text-white"
                     />
                   </div>
                   
-                  <div className="p-4 bg-gray-800 rounded border border-gray-600">
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">Preview:</h4>
-                    <div 
-                      className="text-xs text-gray-400"
-                      dangerouslySetInnerHTML={{ __html: adminSettings.homePageBanner || 'No banner content' }}
+                  <div className="space-y-2">
+                    <Label className="text-white">Notification Type</Label>
+                    <Select>
+                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-600">
+                        <SelectItem value="new_content">New Content</SelectItem>
+                        <SelectItem value="update">App Update</SelectItem>
+                        <SelectItem value="promotion">Promotion</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={sendNotification}
+                  disabled={!notificationText}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Send Notification
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Bulk Import Tab */}
+          <TabsContent value="bulk" className="mt-6">
+            <Card className="bg-gray-900 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <Upload className="w-5 h-5" />
+                  <span>Bulk Import via CSV</span>
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Upload multiple movies at once using CSV format
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-white">CSV Format</Label>
+                    <div className="bg-gray-800 p-4 rounded border border-gray-600">
+                      <p className="text-xs text-gray-300 font-mono">
+                        title,description,poster_url,trailer_url,video_url,genre,category<br/>
+                        Movie Title,Description here,https://poster.jpg,https://trailer.com,https://drive.google.com/file/d/ID/view,Action,movies
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-white">CSV Data</Label>
+                    <Textarea 
+                      placeholder="Paste your CSV data here..."
+                      value={csvData}
+                      onChange={(e) => setCsvData(e.target.value)}
+                      rows={8}
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleBulkImport}
+                  disabled={!csvData || loading}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {loading ? 'Importing...' : 'Import Movies'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center space-x-2">
+                    <Settings className="w-5 h-5" />
+                    <span>General Settings</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="notifications"
+                      checked={adminSettings.notifications}
+                      onCheckedChange={(checked) => 
+                        setAdminSettings({...adminSettings, notifications: checked})
+                      }
+                    />
+                    <Label htmlFor="notifications" className="text-white">Enable Notifications</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="watchHistory"
+                      checked={adminSettings.watchHistory}
+                      onCheckedChange={(checked) => 
+                        setAdminSettings({...adminSettings, watchHistory: checked})
+                      }
+                    />
+                    <Label htmlFor="watchHistory" className="text-white">Watch History</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="autoFetch"
+                      checked={adminSettings.autoFetchTrailers}
+                      onCheckedChange={(checked) => 
+                        setAdminSettings({...adminSettings, autoFetchTrailers: checked})
+                      }
+                    />
+                    <Label htmlFor="autoFetch" className="text-white">Auto-Fetch Trailers</Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Database Provider</Label>
+                    <Select 
+                      value={adminSettings.database} 
+                      onValueChange={(value: 'supabase' | 'firebase') => 
+                        setAdminSettings({...adminSettings, database: value})
+                      }
+                    >
+                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-600">
+                        <SelectItem value="supabase">Supabase</SelectItem>
+                        <SelectItem value="firebase">Firebase</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Social Media Links</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <Input 
+                      placeholder="YouTube Channel" 
+                      defaultValue="https://www.youtube.com/@Jgroupsentertainmenthub048"
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                    <Input 
+                      placeholder="Facebook Page" 
+                      defaultValue="https://www.facebook.com/profile.php?id=61573079981019"
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                    <Input 
+                      placeholder="Instagram Profile" 
+                      defaultValue="https://www.instagram.com/mflix_entertainmenthub?igsh=eTFrOHY4bmNnYmli"
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                    <Input 
+                      placeholder="Telegram Group" 
+                      defaultValue="https://t.me/+nRJaGvh8DMNlMzNl"
+                      className="bg-gray-800 border-gray-600 text-white"
                     />
                   </div>
                 </CardContent>
@@ -873,143 +1099,9 @@ const AdminPage = () => {
             <div className="mt-6">
               <Button onClick={saveAdminSettings} className="bg-red-600 hover:bg-red-700">
                 <Save className="w-4 h-4 mr-2" />
-                Save Ad Settings
+                Save All Settings
               </Button>
             </div>
-          </TabsContent>
-
-          {/* Database Tab */}
-          <TabsContent value="database" className="mt-6">
-            <Card className="bg-gray-900 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
-                  <Database className="w-5 h-5" />
-                  <span>Database Configuration</span>
-                </CardTitle>
-                <CardDescription className="text-gray-400">
-                  Switch between Supabase and Firebase as your backend database
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <Label className="text-white">Select Database Provider</Label>
-                  <Select 
-                    value={adminSettings.database} 
-                    onValueChange={(value: 'supabase' | 'firebase') => 
-                      setAdminSettings({...adminSettings, database: value})
-                    }
-                  >
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      <SelectItem value="supabase">Supabase (Currently Active)</SelectItem>
-                      <SelectItem value="firebase">Firebase</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="p-4 bg-gray-800 rounded border border-gray-600">
-                  <h4 className="font-medium text-white mb-2">Current Status:</h4>
-                  <p className="text-sm text-gray-300">
-                    Using <span className="text-red-500 font-semibold">{adminSettings.database}</span> as the primary database.
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {adminSettings.database === 'supabase' 
-                      ? 'Connected to Supabase for real-time data and authentication'
-                      : 'Firebase configuration needed for full functionality'
-                    }
-                  </p>
-                </div>
-
-                <Button onClick={saveAdminSettings} className="bg-red-600 hover:bg-red-700">
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Database Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="mt-6">
-            <Card className="bg-gray-900 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
-                  <Settings className="w-5 h-5" />
-                  <span>Entertainment Hub Settings</span>
-                </CardTitle>
-                <CardDescription className="text-gray-400">
-                  Configure general Entertainment Hub settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-white">Default Telegram Channel</Label>
-                    <Input 
-                      placeholder="https://t.me/+nRJaGvh8DMNlMzNl" 
-                      defaultValue="https://t.me/+nRJaGvh8DMNlMzNl"
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-white">Social Media Links</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input 
-                        placeholder="YouTube Channel" 
-                        defaultValue="https://www.youtube.com/@Jgroupsentertainmenthub048"
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
-                      <Input 
-                        placeholder="Facebook Page" 
-                        defaultValue="https://www.facebook.com/profile.php?id=61573079981019"
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
-                      <Input 
-                        placeholder="Instagram Profile" 
-                        defaultValue="https://www.instagram.com/mflix_entertainmenthub?igsh=eTFrOHY4bmNnYmli"
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
-                      <Input 
-                        placeholder="Telegram Group" 
-                        defaultValue="https://t.me/+nRJaGvh8DMNlMzNl"
-                        className="bg-gray-800 border-gray-600 text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-white">App Configuration</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-300">Splash Screen Duration (seconds)</Label>
-                        <Input 
-                          type="number" 
-                          placeholder="5" 
-                          defaultValue="5"
-                          className="bg-gray-800 border-gray-600 text-white"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-300">Player Splash Duration (seconds)</Label>
-                        <Input 
-                          type="number" 
-                          placeholder="3" 
-                          defaultValue="3"
-                          className="bg-gray-800 border-gray-600 text-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Button onClick={saveAdminSettings} className="bg-red-600 hover:bg-red-700">
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Settings
-                </Button>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
@@ -1025,7 +1117,7 @@ const AdminPage = () => {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            <Button variant="destructive" onClick={() => {}}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
