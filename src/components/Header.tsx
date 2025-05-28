@@ -31,19 +31,15 @@ const Header = ({ onSearch }: HeaderProps) => {
     <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-md supports-[backdrop-filter]:bg-black/90 border-b border-red-900/30">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          {/* MFLIX Logo */}
+          {/* Entertainment Hub Logo */}
           <div className="flex items-center space-x-4">
             <div 
               className="cursor-pointer flex items-center space-x-3"
               onClick={() => navigate('/')}
             >
-              <img 
-                src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
-                alt="MFLIX" 
-                className="w-10 h-10 object-contain"
-              />
               <span className="text-red-500 text-2xl font-bold tracking-wider drop-shadow-lg">
-                MFLIX
+                Entertainment<br />
+                <span className="ml-8">Hub</span>
               </span>
             </div>
           </div>
@@ -60,7 +56,7 @@ const Header = ({ onSearch }: HeaderProps) => {
               onClick={() => scrollToSection('latest')} 
               className="text-white hover:text-red-500 transition-colors font-semibold"
             >
-              Latest Movies
+              Latest Releases
             </button>
             <button 
               onClick={() => scrollToSection('webseries')} 
@@ -72,7 +68,7 @@ const Header = ({ onSearch }: HeaderProps) => {
               onClick={() => scrollToSection('trending')} 
               className="text-white hover:text-red-500 transition-colors font-semibold"
             >
-              Trending
+              Popular
             </button>
             <button 
               onClick={() => navigate('/admin')} 
@@ -122,19 +118,19 @@ const Header = ({ onSearch }: HeaderProps) => {
                 onClick={() => scrollToSection('latest')} 
                 className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
               >
-                Latest Movies
+                Latest Releases
               </button>
               <button 
                 onClick={() => scrollToSection('webseries')} 
                 className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
               >
-                Web Series
+                Web Series Collection
               </button>
               <button 
                 onClick={() => scrollToSection('trending')} 
                 className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
               >
-                Trending
+                Popular Right Now
               </button>
               <button 
                 onClick={() => { navigate('/admin'); setIsMenuOpen(false); }} 

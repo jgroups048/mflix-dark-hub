@@ -14,6 +14,7 @@ const WatchPage = () => {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
+  const [isWatching, setIsWatching] = useState(false);
   
   // Show splash screen for 3 seconds when navigating to watch page
   useEffect(() => {
@@ -78,9 +79,9 @@ const WatchPage = () => {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <img 
-            src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
-            alt="MFLIX" 
-            className="w-32 h-32 mx-auto mb-4 animate-pulse"
+            src="/lovable-uploads/7747cf52-23e4-4d36-93ef-80dbc9a63304.png" 
+            alt="Entertainment Hub" 
+            className="w-48 h-auto mx-auto mb-4 animate-pulse"
           />
           <p className="text-red-500 text-xl font-bold">Loading your entertainment...</p>
         </div>
@@ -111,8 +112,11 @@ const WatchPage = () => {
     );
   }
 
+  const handleWatchNow = () => {
+    setIsWatching(true);
+  };
+
   const handleDownload = () => {
-    // Navigate to download page or open download link
     navigate(`/download/${movie.id}`);
   };
 
@@ -126,54 +130,96 @@ const WatchPage = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </Button>
-            <img 
-              src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
-              alt="MFLIX" 
-              className="w-8 h-8 object-contain"
-            />
             <h1 className="text-xl font-semibold text-white">{movie.title}</h1>
           </div>
         </div>
       </div>
 
-      {/* Video Player */}
-      <div className="relative">
-        <div className="aspect-video w-full">
-          <iframe
-            src={movie.videoUrl}
-            title={movie.title}
-            className="w-full h-full"
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          />
-        </div>
-      </div>
-
-      {/* Movie Details */}
+      {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Movie Info */}
-          <div className="lg:col-span-2">
-            <h1 className="text-3xl font-bold mb-4 text-white">{movie.title}</h1>
-            
-            <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-gray-300">
-              <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">
-                ⭐ {movie.rating}/10
-              </span>
-              <span>{movie.releaseYear}</span>
-              <span>{movie.duration}</span>
-              <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>
+        {!isWatching ? (
+          // Movie Details Page
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Movie Info */}
+            <div className="lg:col-span-2">
+              <h1 className="text-4xl font-bold mb-4 text-white">{movie.title}</h1>
+              
+              <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-gray-300">
+                <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">
+                  ⭐ {movie.rating}/10
+                </span>
+                <span>{movie.releaseYear}</span>
+                <span>{movie.duration}</span>
+                <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>
+              </div>
+
+              <p className="text-gray-300 leading-relaxed mb-8 text-lg">
+                {movie.description}
+              </p>
+
+              <div className="flex flex-wrap gap-4">
+                <Button 
+                  onClick={handleWatchNow}
+                  className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 text-lg"
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  Watch Now
+                </Button>
+                <Button 
+                  onClick={handleDownload}
+                  variant="outline" 
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-8 py-4 text-lg"
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  Download Now
+                </Button>
+              </div>
             </div>
 
-            <p className="text-gray-300 leading-relaxed mb-8 text-lg">
-              {movie.description}
-            </p>
+            {/* Movie Poster */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-24">
+                <img
+                  src={movie.posterUrl}
+                  alt={movie.title}
+                  className="w-full rounded-lg shadow-2xl"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Video Player
+          <div className="space-y-6">
+            {/* Video Player */}
+            <div className="relative">
+              <div className="aspect-video w-full">
+                <iframe
+                  src={movie.videoUrl}
+                  title={movie.title}
+                  className="w-full h-full rounded-lg"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                />
+              </div>
+            </div>
 
-            <div className="flex flex-wrap gap-4">
-              <Button className="bg-red-600 hover:bg-red-700 text-white">
-                <Play className="w-4 h-4 mr-2" />
-                Watch Now
-              </Button>
+            {/* Video Info Below Player */}
+            <div className="bg-gray-900/50 rounded-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-2">{movie.title}</h2>
+              <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-gray-300">
+                <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">
+                  ⭐ {movie.rating}/10
+                </span>
+                <span>{movie.releaseYear}</span>
+                <span>{movie.duration}</span>
+                <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>
+              </div>
+              <p className="text-gray-300 leading-relaxed mb-4">
+                {movie.description}
+              </p>
               <Button 
                 onClick={handleDownload}
                 variant="outline" 
@@ -182,26 +228,9 @@ const WatchPage = () => {
                 <Download className="w-4 h-4 mr-2" />
                 Download Now
               </Button>
-              <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
-                Add to Watchlist
-              </Button>
             </div>
           </div>
-
-          {/* Movie Poster */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <img
-                src={movie.posterUrl}
-                alt={movie.title}
-                className="w-full rounded-lg shadow-2xl"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/placeholder.svg';
-                }}
-              />
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

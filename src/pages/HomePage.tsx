@@ -17,7 +17,7 @@ const HomePage = () => {
 
   // Track page visit
   useEffect(() => {
-    console.log('MFLIX Entertainment Hub - Your Ultimate Entertainment Destination');
+    console.log('Entertainment Hub - Your Ultimate Entertainment Destination');
   }, []);
 
   // Fetch movies from database
@@ -51,8 +51,8 @@ const HomePage = () => {
       } catch (error) {
         console.error('Error fetching movies:', error);
         toast({
-          title: 'Welcome to MFLIX',
-          description: 'Entertainment Hub is loading content...',
+          title: 'Welcome to Entertainment Hub',
+          description: 'Loading your favorite content...',
         });
       } finally {
         setLoading(false);
@@ -77,7 +77,7 @@ const HomePage = () => {
       latest: filteredMovies.filter(movie => movie.category === 'latest' || movie.category === 'movies').slice(0, 12),
       webseries: filteredMovies.filter(movie => movie.category === 'webseries').slice(0, 12),
       trending: filteredMovies.slice(0, 12),
-      topPicks: filteredMovies.filter(movie => movie.rating >= 8).slice(0, 12),
+      topPicks: filteredMovies.filter(movie => movie.rating >= 8).slice(0, 10),
     };
   }, [filteredMovies]);
 
@@ -91,8 +91,8 @@ const HomePage = () => {
         {loading ? (
           <div className="container mx-auto px-4 py-20 text-center text-gray-400">
             <div className="animate-pulse">
-              <div className="text-xl mb-4">Loading MFLIX Entertainment...</div>
-              <div className="text-sm">Your Ultimate Entertainment Hub</div>
+              <div className="text-xl mb-4">Loading Entertainment Hub...</div>
+              <div className="text-sm">Your Ultimate Entertainment Destination</div>
             </div>
           </div>
         ) : searchQuery ? (
@@ -104,24 +104,24 @@ const HomePage = () => {
           <>
             {/* Netflix-style Horizontal Carousels */}
             <MovieGrid
-              title="🎬 Latest Movies"
+              title="🎬 Latest Releases"
               movies={moviesByCategory.latest}
               id="latest"
             />
             <MovieGrid
-              title="📺 Trending Web Series"
+              title="📺 Web Series Collection"
               movies={moviesByCategory.webseries}
               id="webseries"
             />
             <MovieGrid
-              title="⭐ Top Picks"
-              movies={moviesByCategory.topPicks}
+              title="🔥 Popular Right Now"
+              movies={moviesByCategory.trending}
               id="trending"
             />
             <MovieGrid
-              title="🔥 Recently Added"
-              movies={filteredMovies.slice(0, 12)}
-              id="recent"
+              title="⭐ Top 10 Picks"
+              movies={moviesByCategory.topPicks}
+              id="top10"
             />
 
             {/* Download Sections */}

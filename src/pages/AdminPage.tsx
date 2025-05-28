@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -223,7 +222,7 @@ const AdminPage = () => {
 
       toast({
         title: 'Success!',
-        description: editingMovie ? 'Movie updated successfully' : 'Movie uploaded successfully',
+        description: editingMovie ? 'Content updated successfully' : 'Content uploaded successfully',
       });
 
       resetForm();
@@ -280,12 +279,12 @@ const AdminPage = () => {
 
       toast({
         title: 'Deleted',
-        description: 'Movie has been deleted successfully',
+        description: 'Content has been deleted successfully',
       });
 
       fetchMovies();
     } catch (error: any) {
-      console.error('Error deleting movie:', error);
+      console.error('Error deleting content:', error);
       toast({
         title: 'Deletion failed',
         description: `Error: ${error.message}`,
@@ -317,12 +316,7 @@ const AdminPage = () => {
                 Back to Home
               </Button>
               <div className="flex items-center space-x-3">
-                <img 
-                  src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
-                  alt="MFLIX" 
-                  className="w-8 h-8 object-contain"
-                />
-                <h1 className="text-2xl font-bold text-red-500">MFLIX Admin Panel</h1>
+                <h1 className="text-2xl font-bold text-red-500">Entertainment Hub Admin Panel</h1>
               </div>
             </div>
           </div>
@@ -333,8 +327,8 @@ const AdminPage = () => {
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="grid w-full grid-cols-6 bg-gray-900">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-red-600">Dashboard</TabsTrigger>
-            <TabsTrigger value="upload" className="data-[state=active]:bg-red-600">Add Movie</TabsTrigger>
-            <TabsTrigger value="manage" className="data-[state=active]:bg-red-600">Manage Movies</TabsTrigger>
+            <TabsTrigger value="upload" className="data-[state=active]:bg-red-600">Add Content</TabsTrigger>
+            <TabsTrigger value="manage" className="data-[state=active]:bg-red-600">Manage Content</TabsTrigger>
             <TabsTrigger value="ads" className="data-[state=active]:bg-red-600">Ad Management</TabsTrigger>
             <TabsTrigger value="database" className="data-[state=active]:bg-red-600">Database</TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-red-600">Settings</TabsTrigger>
@@ -411,9 +405,9 @@ const AdminPage = () => {
           <TabsContent value="upload" className="mt-6">
             <Card className="bg-gray-900 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white">{editingMovie ? 'Edit Movie' : 'Add New Movie'}</CardTitle>
+                <CardTitle className="text-white">{editingMovie ? 'Edit Content' : 'Add New Content'}</CardTitle>
                 <CardDescription className="text-gray-400">
-                  {editingMovie ? 'Update movie details' : 'Add a new movie, web series, or content to MFLIX'}
+                  {editingMovie ? 'Update content details' : 'Add new movies, web series, or entertainment content to Entertainment Hub'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -548,16 +542,17 @@ const AdminPage = () => {
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="videoUrl" className="text-white">Video URL (YouTube/Drive) *</Label>
+                      <Label htmlFor="videoUrl" className="text-white">Video/Trailer URL (YouTube/Drive) *</Label>
                       <Input 
                         id="videoUrl" 
                         type="url" 
-                        placeholder="https://youtube.com/watch?v=xyz" 
+                        placeholder="https://youtube.com/watch?v=xyz or Google Drive link" 
                         value={formData.videoUrl}
                         onChange={handleInputChange}
                         className="bg-gray-800 border-gray-600 text-white"
                         required 
                       />
+                      <p className="text-xs text-gray-400">For homepage hero section: add trailer link. For watch page: add full movie/episode link.</p>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
@@ -589,7 +584,7 @@ const AdminPage = () => {
                     <Label htmlFor="description" className="text-white">Description</Label>
                     <Textarea 
                       id="description" 
-                      placeholder="Enter movie description..." 
+                      placeholder="Enter detailed description..." 
                       rows={4}
                       value={formData.description}
                       onChange={handleInputChange}
@@ -600,7 +595,7 @@ const AdminPage = () => {
                   <div className="flex gap-4">
                     <Button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700">
                       <Plus className="w-4 h-4 mr-2" />
-                      {loading ? (editingMovie ? 'Updating...' : 'Adding...') : (editingMovie ? 'Update Movie' : 'Add Movie')}
+                      {loading ? (editingMovie ? 'Updating...' : 'Adding...') : (editingMovie ? 'Update Content' : 'Add Content')}
                     </Button>
                     {editingMovie && (
                       <Button type="button" variant="outline" onClick={resetForm}>
@@ -617,9 +612,9 @@ const AdminPage = () => {
           <TabsContent value="manage" className="mt-6">
             <Card className="bg-gray-900 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white">Manage Movies</CardTitle>
+                <CardTitle className="text-white">Manage Content</CardTitle>
                 <CardDescription className="text-gray-400">
-                  Edit or delete existing movies from MFLIX
+                  Edit or delete existing content from Entertainment Hub
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -848,10 +843,10 @@ const AdminPage = () => {
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
                   <Settings className="w-5 h-5" />
-                  <span>General Settings</span>
+                  <span>Entertainment Hub Settings</span>
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  Configure general MFLIX Entertainment HUB settings
+                  Configure general Entertainment Hub settings
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -932,7 +927,7 @@ const AdminPage = () => {
           <DialogHeader>
             <DialogTitle className="text-white">Confirm Deletion</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Are you sure you want to delete this movie? This action cannot be undone.
+              Are you sure you want to delete this content? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
