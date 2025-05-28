@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { AuthUser, getCurrentUser, signIn, signOut, signUp } from '@/lib/auth';
 import { useToast } from './use-toast';
@@ -27,6 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user);
     } catch (error) {
       console.error('Error checking user session:', error);
+      // If Firebase is not configured, just set loading to false and continue
+      if (error instanceof Error && error.message.includes('Firebase is not configured')) {
+        console.warn('Firebase authentication is not available');
+      }
     } finally {
       setLoading(false);
     }

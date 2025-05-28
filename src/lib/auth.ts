@@ -1,3 +1,4 @@
+
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -22,30 +23,52 @@ function transformUser(user: FirebaseUser): AuthUser {
   };
 }
 
+// Check if Firebase auth is available
+const isFirebaseConfigured = auth !== null;
+
 export async function signUp(email: string, password: string) {
-  const { user } = await createUserWithEmailAndPassword(auth, email, password);
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase is not configured. Please set the required environment variables.');
+  }
+  const { user } = await createUserWithEmailAndPassword(auth!, email, password);
   return { user: transformUser(user) };
 }
 
 export async function signIn(email: string, password: string) {
-  const { user } = await signInWithEmailAndPassword(auth, email, password);
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase is not configured. Please set the required environment variables.');
+  }
+  const { user } = await signInWithEmailAndPassword(auth!, email, password);
   return { user: transformUser(user) };
 }
 
 export async function signOut() {
-  await firebaseSignOut(auth);
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase is not configured. Please set the required environment variables.');
+  }
+  await firebaseSignOut(auth!);
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const user = auth.currentUser;
+  if (!isFirebaseConfigured) {
+    console.warn('Firebase is not configured. Returning null user.');
+    return null;
+  }
+  const user = auth!.currentUser;
   return user ? transformUser(user) : null;
 }
 
 export async function resetPassword(email: string) {
-  await sendPasswordResetEmail(auth, email);
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase is not configured. Please set the required environment variables.');
+  }
+  await sendPasswordResetEmail(auth!, email);
 }
 
 export async function updatePassword(newPassword: string) {
-  if (!auth.currentUser) throw new Error('No user logged in');
-  await firebaseUpdatePassword(auth.currentUser, newPassword);
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase is not configured. Please set the required environment variables.');
+  }
+  if (!auth!.currentUser) throw new Error('No user logged in');
+  await firebaseUpdatePassword(auth!.currentUser, newPassword);
 }
