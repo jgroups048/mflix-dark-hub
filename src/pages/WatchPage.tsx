@@ -73,13 +73,22 @@ const WatchPage = () => {
     }
   }, [id, toast, showSplash]);
 
+  // Convert Google Drive share link to preview link
+  const getGoogleDrivePreviewUrl = (url: string) => {
+    const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (fileIdMatch) {
+      return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+    }
+    return url;
+  };
+
   // Splash screen while loading
   if (showSplash) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <img 
-            src="/lovable-uploads/7747cf52-23e4-4d36-93ef-80dbc9a63304.png" 
+            src="/lovable-uploads/a177babb-70b0-43a3-9539-f3964d37f08a.png" 
             alt="Entertainment Hub" 
             className="w-48 h-auto mx-auto mb-4 animate-pulse"
           />
@@ -119,6 +128,10 @@ const WatchPage = () => {
   const handleDownload = () => {
     navigate(`/download/${movie.id}`);
   };
+
+  const videoUrl = movie.videoUrl.includes('drive.google.com') 
+    ? getGoogleDrivePreviewUrl(movie.videoUrl)
+    : movie.videoUrl;
 
   return (
     <div className="min-h-screen bg-black">
@@ -197,7 +210,7 @@ const WatchPage = () => {
             <div className="relative">
               <div className="aspect-video w-full">
                 <iframe
-                  src={movie.videoUrl}
+                  src={videoUrl}
                   title={movie.title}
                   className="w-full h-full rounded-lg"
                   allowFullScreen

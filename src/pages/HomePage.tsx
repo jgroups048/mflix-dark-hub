@@ -5,6 +5,7 @@ import HeroSection from '@/components/HeroSection';
 import MovieGrid from '@/components/MovieGrid';
 import DownloadSection from '@/components/DownloadSection';
 import Footer from '@/components/Footer';
+import SocialMediaButtons from '@/components/SocialMediaButtons';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/movie';
 import { useToast } from '@/hooks/use-toast';
@@ -104,7 +105,7 @@ const HomePage = () => {
           <>
             {/* Netflix-style Horizontal Carousels */}
             <MovieGrid
-              title="🎬 Latest Releases"
+              title="🎬 Latest Movies"
               movies={moviesByCategory.latest}
               id="latest"
             />
@@ -114,7 +115,7 @@ const HomePage = () => {
               id="webseries"
             />
             <MovieGrid
-              title="🔥 Popular Right Now"
+              title="🔥 Trending Now"
               movies={moviesByCategory.trending}
               id="trending"
             />
@@ -140,6 +141,7 @@ const HomePage = () => {
       </main>
 
       <Footer />
+      <SocialMediaButtons />
     </div>
   );
 };

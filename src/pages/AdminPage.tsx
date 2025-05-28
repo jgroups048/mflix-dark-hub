@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Plus, Edit, Trash2, Eye, Save, Database, Settings, Video, Image } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Eye, Save, Database, Settings, Video, Image, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,7 @@ interface ExtendedMovie extends Movie {
   language?: string;
   tags?: string;
   telegramChannel?: string;
+  isFeatured?: boolean;
 }
 
 interface AdminSettings {
@@ -67,7 +68,8 @@ const AdminPage = () => {
     tags: '',
     telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
     downloadUrl: '',
-    trailerUrl: ''
+    trailerUrl: '',
+    isFeatured: false
   });
 
   useEffect(() => {
@@ -158,7 +160,8 @@ const AdminPage = () => {
       tags: '',
       telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
       downloadUrl: '',
-      trailerUrl: ''
+      trailerUrl: '',
+      isFeatured: false
     });
     setEditingMovie(null);
   };
@@ -255,7 +258,8 @@ const AdminPage = () => {
       tags: movie.tags || '',
       telegramChannel: movie.telegramChannel || 'https://t.me/+nRJaGvh8DMNlMzNl',
       downloadUrl: '',
-      trailerUrl: ''
+      trailerUrl: '',
+      isFeatured: movie.isFeatured || false
     });
   };
 
@@ -325,11 +329,12 @@ const AdminPage = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-gray-900">
+          <TabsList className="grid w-full grid-cols-7 bg-gray-900">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-red-600">Dashboard</TabsTrigger>
+            <TabsTrigger value="featured" className="data-[state=active]:bg-red-600">Featured</TabsTrigger>
             <TabsTrigger value="upload" className="data-[state=active]:bg-red-600">Add Content</TabsTrigger>
-            <TabsTrigger value="manage" className="data-[state=active]:bg-red-600">Manage Content</TabsTrigger>
-            <TabsTrigger value="ads" className="data-[state=active]:bg-red-600">Ad Management</TabsTrigger>
+            <TabsTrigger value="manage" className="data-[state=active]:bg-red-600">Manage</TabsTrigger>
+            <TabsTrigger value="ads" className="data-[state=active]:bg-red-600">Ads</TabsTrigger>
             <TabsTrigger value="database" className="data-[state=active]:bg-red-600">Database</TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-red-600">Settings</TabsTrigger>
           </TabsList>
@@ -401,7 +406,81 @@ const AdminPage = () => {
             </Card>
           </TabsContent>
 
-          {/* Upload Tab */}
+          {/* Featured Trailer Tab */}
+          <TabsContent value="featured" className="mt-6">
+            <Card className="bg-gray-900 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <Star className="w-5 h-5" />
+                  <span>Featured Trailer Management</span>
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Control the hero section trailer that appears on the homepage
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-white">Select Featured Movie/Trailer</Label>
+                    <Select>
+                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                        <SelectValue placeholder="Choose which movie to feature" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-600">
+                        {movies.map(movie => (
+                          <SelectItem key={movie.id} value={movie.id}>
+                            {movie.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-white">Featured Trailer YouTube URL</Label>
+                    <Input 
+                      placeholder="https://youtube.com/watch?v=..." 
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                    <p className="text-xs text-gray-400">This will autoplay in the homepage hero section</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Featured Description</Label>
+                    <Textarea 
+                      placeholder="Epic description for the featured content..."
+                      rows={3}
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-white">"Watch Now" Button Link</Label>
+                      <Input 
+                        placeholder="/watch/movie-id or custom URL" 
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white">"More Info" Button Link</Label>
+                      <Input 
+                        placeholder="/watch/movie-id or custom URL" 
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button className="bg-red-600 hover:bg-red-700">
+                  <Save className="w-4 h-4 mr-2" />
+                  Update Featured Content
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Upload Tab - Add featured toggle */}
           <TabsContent value="upload" className="mt-6">
             <Card className="bg-gray-900 border-gray-700">
               <CardHeader>
@@ -602,6 +681,20 @@ const AdminPage = () => {
                         Cancel Edit
                       </Button>
                     )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="featured"
+                        checked={formData.isFeatured}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, isFeatured: checked})
+                        }
+                      />
+                      <Label htmlFor="featured" className="text-white">Set as Featured Trailer</Label>
+                    </div>
+                    <p className="text-xs text-gray-400">Featured content will appear in the homepage hero section</p>
                   </div>
                 </form>
               </CardContent>

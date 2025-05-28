@@ -16,12 +16,12 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(() => {
-    const splashShown = sessionStorage.getItem('mflix-splash-shown');
+    const splashShown = sessionStorage.getItem('entertainment-hub-splash-shown');
     return !splashShown;
   });
 
   const handleSplashComplete = () => {
-    sessionStorage.setItem('mflix-splash-shown', 'true');
+    sessionStorage.setItem('entertainment-hub-splash-shown', 'true');
     setShowSplash(false);
   };
 
