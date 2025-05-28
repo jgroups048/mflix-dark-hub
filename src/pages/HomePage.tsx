@@ -17,7 +17,7 @@ const HomePage = () => {
 
   // Track page visit
   useEffect(() => {
-    console.log('MFLIX Homepage visited - Entertainment Hub');
+    console.log('MFLIX Entertainment Hub - Your Ultimate Entertainment Destination');
   }, []);
 
   // Fetch movies from database
@@ -51,9 +51,8 @@ const HomePage = () => {
       } catch (error) {
         console.error('Error fetching movies:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load content from MFLIX database',
-          variant: 'destructive'
+          title: 'Welcome to MFLIX',
+          description: 'Entertainment Hub is loading content...',
         });
       } finally {
         setLoading(false);
@@ -75,10 +74,10 @@ const HomePage = () => {
 
   const moviesByCategory = useMemo(() => {
     return {
-      latest: filteredMovies.filter(movie => movie.category === 'latest'),
-      movies: filteredMovies.filter(movie => movie.category === 'movies'),
-      webseries: filteredMovies.filter(movie => movie.category === 'webseries'),
-      livetv: filteredMovies.filter(movie => movie.category === 'livetv'),
+      latest: filteredMovies.filter(movie => movie.category === 'latest' || movie.category === 'movies').slice(0, 12),
+      webseries: filteredMovies.filter(movie => movie.category === 'webseries').slice(0, 12),
+      trending: filteredMovies.slice(0, 12),
+      topPicks: filteredMovies.filter(movie => movie.rating >= 8).slice(0, 12),
     };
   }, [filteredMovies]);
 
@@ -93,7 +92,7 @@ const HomePage = () => {
           <div className="container mx-auto px-4 py-20 text-center text-gray-400">
             <div className="animate-pulse">
               <div className="text-xl mb-4">Loading MFLIX Entertainment...</div>
-              <div className="text-sm">Powered by J GROUPS</div>
+              <div className="text-sm">Your Ultimate Entertainment Hub</div>
             </div>
           </div>
         ) : searchQuery ? (
@@ -103,43 +102,38 @@ const HomePage = () => {
           />
         ) : (
           <>
-            {/* Download Sections */}
-            <DownloadSection 
-              title="🎬 Latest Movie Downloads"
-              contentType="movies"
-              limit={8}
-            />
-            <DownloadSection 
-              title="📺 Web Series Downloads"
-              contentType="webseries"
-              limit={8}
-            />
-            <DownloadSection 
-              title="⭐ Premium Collection"
-              contentType="movies"
-              limit={8}
-            />
-
-            {/* Regular Movie Grids */}
+            {/* Netflix-style Horizontal Carousels */}
             <MovieGrid
-              title="Latest Releases"
+              title="🎬 Latest Movies"
               movies={moviesByCategory.latest}
               id="latest"
             />
             <MovieGrid
-              title="Movies"
-              movies={moviesByCategory.movies}
-              id="movies"
-            />
-            <MovieGrid
-              title="Web Series"
+              title="📺 Trending Web Series"
               movies={moviesByCategory.webseries}
               id="webseries"
             />
             <MovieGrid
-              title="Live TV"
-              movies={moviesByCategory.livetv}
-              id="livetv"
+              title="⭐ Top Picks"
+              movies={moviesByCategory.topPicks}
+              id="trending"
+            />
+            <MovieGrid
+              title="🔥 Recently Added"
+              movies={filteredMovies.slice(0, 12)}
+              id="recent"
+            />
+
+            {/* Download Sections */}
+            <DownloadSection 
+              title="💾 Download Latest Movies"
+              contentType="movies"
+              limit={8}
+            />
+            <DownloadSection 
+              title="📱 Download Web Series"
+              contentType="webseries"
+              limit={8}
             />
           </>
         )}

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Search, Menu, X, User } from 'lucide-react';
+import { Search, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
@@ -34,9 +34,14 @@ const Header = ({ onSearch }: HeaderProps) => {
           {/* MFLIX Logo */}
           <div className="flex items-center space-x-4">
             <div 
-              className="cursor-pointer"
+              className="cursor-pointer flex items-center space-x-3"
               onClick={() => navigate('/')}
             >
+              <img 
+                src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
+                alt="MFLIX" 
+                className="w-10 h-10 object-contain"
+              />
               <span className="text-red-500 text-2xl font-bold tracking-wider drop-shadow-lg">
                 MFLIX
               </span>
@@ -52,10 +57,10 @@ const Header = ({ onSearch }: HeaderProps) => {
               Home
             </button>
             <button 
-              onClick={() => scrollToSection('movies')} 
+              onClick={() => scrollToSection('latest')} 
               className="text-white hover:text-red-500 transition-colors font-semibold"
             >
-              Movies
+              Latest Movies
             </button>
             <button 
               onClick={() => scrollToSection('webseries')} 
@@ -67,13 +72,7 @@ const Header = ({ onSearch }: HeaderProps) => {
               onClick={() => scrollToSection('trending')} 
               className="text-white hover:text-red-500 transition-colors font-semibold"
             >
-              Categories
-            </button>
-            <button 
-              onClick={() => scrollToSection('latest')} 
-              className="text-white hover:text-red-500 transition-colors font-semibold"
-            >
-              Latest
+              Trending
             </button>
           </nav>
 
@@ -91,28 +90,15 @@ const Header = ({ onSearch }: HeaderProps) => {
             </div>
           </form>
 
-          {/* User Actions */}
-          <div className="flex items-center space-x-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/auth')} 
-              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-semibold"
-            >
-              <User className="w-4 h-4 mr-2" />
-              Login
-            </Button>
-            
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden text-white hover:text-red-500"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden text-white hover:text-red-500"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
         </div>
 
         {/* Mobile Menu */}
@@ -126,10 +112,10 @@ const Header = ({ onSearch }: HeaderProps) => {
                 Home
               </button>
               <button 
-                onClick={() => scrollToSection('movies')} 
+                onClick={() => scrollToSection('latest')} 
                 className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
               >
-                Movies
+                Latest Movies
               </button>
               <button 
                 onClick={() => scrollToSection('webseries')} 
@@ -141,13 +127,7 @@ const Header = ({ onSearch }: HeaderProps) => {
                 onClick={() => scrollToSection('trending')} 
                 className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
               >
-                Categories
-              </button>
-              <button 
-                onClick={() => scrollToSection('latest')} 
-                className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
-              >
-                Latest
+                Trending
               </button>
             </nav>
             

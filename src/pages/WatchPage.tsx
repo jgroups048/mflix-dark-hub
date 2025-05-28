@@ -1,7 +1,7 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Play } from 'lucide-react';
+import { ArrowLeft, Play, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/movie';
@@ -13,6 +13,16 @@ const WatchPage = () => {
   const { toast } = useToast();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
+  
+  // Show splash screen for 3 seconds when navigating to watch page
+  useEffect(() => {
+    const splashTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000);
+    
+    return () => clearTimeout(splashTimer);
+  }, []);
   
   useEffect(() => {
     const fetchMovie = async () => {
@@ -57,13 +67,31 @@ const WatchPage = () => {
       }
     };
     
-    fetchMovie();
-  }, [id, toast]);
+    if (!showSplash) {
+      fetchMovie();
+    }
+  }, [id, toast, showSplash]);
+
+  // Splash screen while loading
+  if (showSplash) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <img 
+            src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
+            alt="MFLIX" 
+            className="w-32 h-32 mx-auto mb-4 animate-pulse"
+          />
+          <p className="text-red-500 text-xl font-bold">Loading your entertainment...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center text-white">
           <p>Loading movie...</p>
         </div>
       </div>
@@ -72,26 +100,38 @@ const WatchPage = () => {
 
   if (!movie) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center text-white">
           <h1 className="text-2xl font-bold mb-4">Movie Not Found</h1>
-          <Button onClick={() => navigate('/')}>Go Back Home</Button>
+          <Button onClick={() => navigate('/')} className="bg-red-600 hover:bg-red-700">
+            Go Back Home
+          </Button>
         </div>
       </div>
     );
   }
 
+  const handleDownload = () => {
+    // Navigate to download page or open download link
+    navigate(`/download/${movie.id}`);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
+      <div className="sticky top-0 z-50 bg-black/95 backdrop-blur border-b border-red-900/30">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="text-white hover:text-red-500">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              Back to Home
             </Button>
-            <h1 className="text-xl font-semibold">{movie.title}</h1>
+            <img 
+              src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
+              alt="MFLIX" 
+              className="w-8 h-8 object-contain"
+            />
+            <h1 className="text-xl font-semibold text-white">{movie.title}</h1>
           </div>
         </div>
       </div>
@@ -114,28 +154,37 @@ const WatchPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Movie Info */}
           <div className="lg:col-span-2">
-            <h1 className="text-3xl font-bold mb-4">{movie.title}</h1>
+            <h1 className="text-3xl font-bold mb-4 text-white">{movie.title}</h1>
             
-            <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
-              <span className="bg-primary text-primary-foreground px-2 py-1 rounded">
-                {movie.rating}/10
+            <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-gray-300">
+              <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">
+                ⭐ {movie.rating}/10
               </span>
               <span>{movie.releaseYear}</span>
               <span>{movie.duration}</span>
-              <span className="bg-secondary px-2 py-1 rounded">{movie.genre}</span>
+              <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>
             </div>
 
-            <p className="text-muted-foreground leading-relaxed mb-6">
+            <p className="text-gray-300 leading-relaxed mb-8 text-lg">
               {movie.description}
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button className="bg-primary hover:bg-primary/90">
+              <Button className="bg-red-600 hover:bg-red-700 text-white">
                 <Play className="w-4 h-4 mr-2" />
                 Watch Now
               </Button>
-              <Button variant="outline">Add to Watchlist</Button>
-              <Button variant="outline">Share</Button>
+              <Button 
+                onClick={handleDownload}
+                variant="outline" 
+                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Now
+              </Button>
+              <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                Add to Watchlist
+              </Button>
             </div>
           </div>
 
@@ -145,7 +194,7 @@ const WatchPage = () => {
               <img
                 src={movie.posterUrl}
                 alt={movie.title}
-                className="w-full rounded-lg shadow-lg"
+                className="w-full rounded-lg shadow-2xl"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '/placeholder.svg';
                 }}
