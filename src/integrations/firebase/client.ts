@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -17,16 +16,23 @@ const firebaseConfig = {
 const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
 const missingKeys = requiredKeys.filter(key => !firebaseConfig[key as keyof typeof firebaseConfig]);
 
+// Declare exports at top level
+let app: any = null;
+let auth: any = null;
+let db: any = null;
+
 if (missingKeys.length > 0) {
   console.warn('Firebase configuration is incomplete. Missing:', missingKeys);
   console.warn('Firebase features will be disabled. Please set the required environment variables.');
   
-  // Create a mock Firebase app and auth for development
-  export const app = null;
-  export const auth = null;
-  export const db = null;
+  // Keep null values for development
+  app = null;
+  auth = null;
+  db = null;
 } else {
-  export const app = initializeApp(firebaseConfig);
-  export const auth = getAuth(app);
-  export const db = getFirestore(app);
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
 }
+
+export { app, auth, db };
