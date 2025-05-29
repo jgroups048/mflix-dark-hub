@@ -18,6 +18,7 @@ export interface ExtendedMovie {
   language?: string;
   tags?: string;
   telegramChannel?: string;
+  trailerUrl?: string;
   isFeatured?: boolean;
   releaseDate?: string;
   isScheduled?: boolean;
