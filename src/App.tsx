@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,7 +8,7 @@ import SplashScreen from "./components/SplashScreen";
 import HomePage from "./pages/HomePage";
 import WatchPage from "./pages/WatchPage";
 import MovieDownloadPage from "./pages/MovieDownloadPage";
-import AdminPage from "./pages/AdminPage";
+import AdminAuthGuard from "./components/auth/AdminAuthGuard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,7 +38,7 @@ const App = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/watch/:id" element={<WatchPage />} />
             <Route path="/download/:id" element={<MovieDownloadPage />} />
-            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/super-admin-786" element={<AdminAuthGuard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </HashRouter>

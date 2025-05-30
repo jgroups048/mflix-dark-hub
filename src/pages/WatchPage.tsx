@@ -1,20 +1,20 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Play, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { Movie } from '@/types/movie';
+import { fetchVideoById, Movie } from '@/lib/firebaseServices/videoService';
 import { useToast } from '@/hooks/use-toast';
+import { getSiteSettings, SiteSettings } from '@/lib/firebaseServices/siteSettingsService';
 
 const WatchPage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [isWatching, setIsWatching] = useState(false);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   
   // Show splash screen for 3 seconds when navigating to watch page
   useEffect(() => {
@@ -26,41 +26,30 @@ const WatchPage = () => {
   }, []);
   
   useEffect(() => {
-    const fetchMovie = async () => {
+    const loadMovieAndSettings = async () => {
+      if (!id && showSplash === false) {
+        setLoading(false);
+        toast({ title: "Error", description: "Movie ID is missing.", variant: "destructive" });
+        return;
+      }
       try {
         setLoading(true);
-        
-        if (!id) return;
-        
-        const { data, error } = await supabase
-          .from('movies')
-          .select('*')
-          .eq('id', id)
-          .single();
-          
-        if (error) {
-          throw error;
+        if (id) {
+          const fetchedMovie = await fetchVideoById(id);
+          if (fetchedMovie) {
+            setMovie(fetchedMovie);
+          } else {
+            toast({ title: 'Movie Not Found', description: 'Could not load the movie.', variant: 'destructive' });
+          }
         }
-        
-        if (data) {
-          setMovie({
-            id: data.id,
-            title: data.title,
-            description: data.description || '',
-            posterUrl: data.poster_url,
-            videoUrl: data.video_url,
-            genre: data.genre,
-            category: data.category as any,
-            rating: data.rating,
-            duration: data.duration,
-            releaseYear: data.release_year
-          });
-        }
+        const settings = await getSiteSettings();
+        setSiteSettings(settings);
+
       } catch (error) {
-        console.error('Error fetching movie:', error);
+        console.error('Error fetching movie or settings:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load movie details',
+          title: 'Error Loading Page Data',
+          description: 'Failed to load movie details or site settings. Please try again.',
           variant: 'destructive'
         });
       } finally {
@@ -69,17 +58,21 @@ const WatchPage = () => {
     };
     
     if (!showSplash) {
-      fetchMovie();
+      loadMovieAndSettings();
     }
   }, [id, toast, showSplash]);
 
   // Convert Google Drive share link to preview link
-  const getGoogleDrivePreviewUrl = (url: string) => {
+  const getGoogleDrivePreviewUrl = (url: string): string => {
+    if (!url) return '#'; // Return a placeholder or handle error appropriately
     const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    if (fileIdMatch) {
+    if (fileIdMatch && fileIdMatch[1]) {
       return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
     }
-    return url;
+    // If it's not a recognizable Google Drive share link, return the original URL
+    // Or, if it's a direct video link (e.g., .mp4), it might work directly in iframe
+    // Consider additional checks or URL type detection if needed
+    return url; 
   };
 
   // Splash screen while loading
@@ -126,15 +119,23 @@ const WatchPage = () => {
   };
 
   const handleDownload = () => {
-    navigate(`/download/${movie.id}`);
+    if (movie && movie.id) {
+        navigate(`/download/${movie.id}`);
+    } else {
+        toast({title: "Error", description: "Cannot find movie ID for download.", variant: "destructive"});
+    }
   };
 
-  const videoUrl = movie.videoUrl.includes('drive.google.com') 
-    ? getGoogleDrivePreviewUrl(movie.videoUrl)
-    : movie.videoUrl;
+  // Use movie.videoUrl directly if it's already an embeddable link or if getGoogleDrivePreviewUrl handles other types.
+  // The Movie interface from videoService has videoUrl, ensure it holds the correct type of URL.
+  const videoEmbedUrl = movie.videoUrl 
+    ? (movie.videoUrl.includes('drive.google.com') 
+        ? getGoogleDrivePreviewUrl(movie.videoUrl) 
+        : movie.videoUrl)
+    : '#'; // Fallback if videoUrl is undefined
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-black/95 backdrop-blur border-b border-red-900/30">
         <div className="container mx-auto px-4 py-4">
@@ -143,7 +144,7 @@ const WatchPage = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </Button>
-            <h1 className="text-xl font-semibold text-white">{movie.title}</h1>
+            <h1 className="text-xl font-semibold text-white truncate" title={movie.title}>{movie.title}</h1>
           </div>
         </div>
       </div>
@@ -158,22 +159,21 @@ const WatchPage = () => {
               <h1 className="text-4xl font-bold mb-4 text-white">{movie.title}</h1>
               
               <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-gray-300">
-                <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">
-                  ⭐ {movie.rating}/10
-                </span>
-                <span>{movie.releaseYear}</span>
-                <span>{movie.duration}</span>
-                <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>
+                {movie.rating && <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">⭐ {movie.rating}/10</span>}
+                {movie.releaseYear && <span>{movie.releaseYear}</span>}
+                {movie.duration && <span>{movie.duration}</span>}
+                {movie.genre && <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>}
               </div>
 
               <p className="text-gray-300 leading-relaxed mb-8 text-lg">
-                {movie.description}
+                {movie.description || 'No description available.'}
               </p>
 
               <div className="flex flex-wrap gap-4">
                 <Button 
                   onClick={handleWatchNow}
                   className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 text-lg"
+                  disabled={!movie.videoUrl} // Disable if no videoUrl
                 >
                   <Play className="w-5 h-5 mr-2" />
                   Watch Now
@@ -184,7 +184,7 @@ const WatchPage = () => {
                   className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-8 py-4 text-lg"
                 >
                   <Download className="w-5 h-5 mr-2" />
-                  Download Now
+                  Download Movie
                 </Button>
               </div>
             </div>
@@ -193,12 +193,10 @@ const WatchPage = () => {
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 <img
-                  src={movie.posterUrl}
+                  src={movie.posterUrl || '/placeholder.svg'}
                   alt={movie.title}
-                  className="w-full rounded-lg shadow-2xl"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
+                  className="w-full rounded-lg shadow-2xl aspect-[2/3] object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                 />
               </div>
             </div>
@@ -206,32 +204,45 @@ const WatchPage = () => {
         ) : (
           // Video Player
           <div className="space-y-6">
-            {/* Video Player */}
+            {/* Video Player with Overlay Capability */}
             <div className="relative">
-              <div className="aspect-video w-full">
+              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden shadow-2xl">
                 <iframe
-                  src={videoUrl}
+                  src={videoEmbedUrl} // Use the processed videoEmbedUrl
                   title={movie.title}
-                  className="w-full h-full rounded-lg"
+                  className="w-full h-full"
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 />
               </div>
+              {/* Video Overlay Logo */}
+              {siteSettings?.videoOverlayLogoUrl && (
+                <img
+                  src={siteSettings.videoOverlayLogoUrl}
+                  alt="Video Overlay Logo"
+                  className={[
+                    'absolute object-contain opacity-75 z-30',
+                    'h-8 sm:h-10 md:h-12 lg:h-14', // Responsive height
+                    siteSettings.videoOverlayPosition === 'top-left' && 'top-2 left-2 sm:top-4 sm:left-4',
+                    siteSettings.videoOverlayPosition === 'top-right' && 'top-2 right-2 sm:top-4 sm:right-4',
+                    siteSettings.videoOverlayPosition === 'bottom-left' && 'bottom-2 left-2 sm:bottom-4 sm:left-4',
+                    siteSettings.videoOverlayPosition === 'bottom-right' && 'bottom-2 right-2 sm:bottom-4 sm:right-4',
+                  ].filter(Boolean).join(' ')}
+                />
+              )}
             </div>
 
             {/* Video Info Below Player */}
             <div className="bg-gray-900/50 rounded-lg p-6">
               <h2 className="text-2xl font-bold text-white mb-2">{movie.title}</h2>
               <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-gray-300">
-                <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">
-                  ⭐ {movie.rating}/10
-                </span>
-                <span>{movie.releaseYear}</span>
-                <span>{movie.duration}</span>
-                <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>
+                {movie.rating && <span className="bg-red-600 text-white px-3 py-1 rounded-full font-semibold">⭐ {movie.rating}/10</span>}
+                {movie.releaseYear && <span>{movie.releaseYear}</span>}
+                {movie.duration && <span>{movie.duration}</span>}
+                {movie.genre && <span className="bg-gray-700 px-3 py-1 rounded-full">{movie.genre}</span>}
               </div>
               <p className="text-gray-300 leading-relaxed mb-4">
-                {movie.description}
+                {movie.description || 'No description available.'}
               </p>
               <Button 
                 onClick={handleDownload}
@@ -239,7 +250,7 @@ const WatchPage = () => {
                 className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
               >
                 <Download className="w-4 h-4 mr-2" />
-                Download Now
+                Download Movie
               </Button>
             </div>
           </div>

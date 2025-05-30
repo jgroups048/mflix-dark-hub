@@ -1,610 +1,332 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Movie, addVideo, updateVideo, deleteVideo } from '@/lib/firebaseServices/videoService';
+import { AdminSettings as AdminSettingsType } from '@/types/admin'; // Assuming this type is still relevant for context
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2, Star } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { ExtendedMovie, AdminSettings } from '@/types/admin';
+import { PlusCircle, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Timestamp } from 'firebase/firestore';
 
 interface MovieManagerProps {
-  movies: ExtendedMovie[];
-  adminSettings: AdminSettings;
+  movies: Movie[];
+  adminSettings: AdminSettingsType; // Kept for context, use if needed for specific settings
   genres: string[];
   languages: string[];
   onMoviesUpdate: () => void;
 }
 
-const MovieManager = ({ movies, adminSettings, genres, languages, onMoviesUpdate }: MovieManagerProps) => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [editingMovie, setEditingMovie] = useState<ExtendedMovie | null>(null);
+const initialMovieFormData: Partial<Movie> = {
+  title: '',
+  description: '',
+  posterUrl: '',
+  videoUrl: '',
+  downloadUrl: '',
+  genre: '',
+  category: '',
+  rating: 0,
+  duration: '',
+  releaseYear: new Date().getFullYear(),
+  language: '',
+  tags: '',
+  trailerUrl: '',
+  isFeatured: false,
+};
 
-  const [formData, setFormData] = useState({
-    title: '',
-    category: '',
-    genre: '',
-    releaseYear: '',
-    duration: '',
-    rating: '',
-    posterUrl: '',
-    videoUrl: '',
-    description: '',
-    language: 'English',
-    tags: '',
-    telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
-    downloadUrl: '',
-    trailerUrl: '',
-    isFeatured: false,
-    releaseDate: '',
-    isScheduled: false,
-    commentsEnabled: true,
-    ratingsEnabled: true
-  });
+// Utility to convert YouTube/Google Drive URLs to embeddable/direct format
+const convertVideoUrl = (url: string): string => {
+  if (!url) return '';
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+      let videoId = urlObj.searchParams.get('v');
+      if (!videoId && urlObj.hostname.includes('youtu.be')) {
+        videoId = urlObj.pathname.substring(1);
+      }
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    } else if (urlObj.hostname.includes('drive.google.com')) {
+      // If the URL already ends with /preview, return it as is.
+      if (url.endsWith('/preview')) {
+        return url;
+      }
+      // Otherwise, attempt to convert to direct link format for embedding (uc?export=view)
+      const match = url.match(/file\/d\/([^\/]+)/) || url.match(/uc\?id=([^\/&]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+  } catch (e) {
+    // Invalid URL or other error, return original
+    console.warn("Invalid URL or error in convertVideoUrl:", e, "Returning original URL:", url);
+    return url;
+  }
+  // If no conversion rules matched, return the original URL.
+  return url;
+};
+
+const MovieManager: React.FC<MovieManagerProps> = ({ movies, genres, languages, onMoviesUpdate }) => {
+  const { toast } = useToast();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
+  const [currentFormData, setCurrentFormData] = useState<Partial<Movie>>(initialMovieFormData);
+  const [movieToDelete, setMovieToDelete] = useState<Movie | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (editingMovie) {
+      // Convert Timestamp to Date string for datetime-local input if needed, or handle in input component
+      // For simplicity, assuming text inputs for dates or separate date pickers
+      const formDataFromEditingMovie: Partial<Movie> = {
+        ...editingMovie,
+        // Ensure Timestamps are not directly put into form state if they cause issues
+        // For this setup, we assume MovieManager receives data ready for display/editing
+        // And videoService handles Timestamp conversions for Firestore
+      };
+      setCurrentFormData(formDataFromEditingMovie);
+    } else {
+      setCurrentFormData(initialMovieFormData);
+    }
+  }, [editingMovie, isFormOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.id]: e.target.value
-    });
+    const { name, value, type } = e.target;
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : type === 'number' ? parseFloat(value) : value;
+    setCurrentFormData(prev => ({ ...prev, [name]: val }));
   };
 
-  const handleSelectChange = (value: string, name: string) => {
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+  const handleSelectChange = (name: keyof Movie, value: string) => {
+    setCurrentFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      category: '',
-      genre: '',
-      releaseYear: '',
-      duration: '',
-      rating: '',
-      posterUrl: '',
-      videoUrl: '',
-      description: '',
-      language: 'English',
-      tags: '',
-      telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
-      downloadUrl: '',
-      trailerUrl: '',
-      isFeatured: false,
-      releaseDate: '',
-      isScheduled: false,
-      commentsEnabled: true,
-      ratingsEnabled: true
-    });
-    setEditingMovie(null);
-  };
-
-  const convertVideoUrl = (url: string): string => {
-    // YouTube URLs
-    if (url.includes('youtube.com/watch?v=') || url.includes('youtu.be/')) {
-      const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu.be\/)([^&\n?#]+)/)?.[1];
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-    }
-    
-    // Google Drive URLs
-    if (url.includes('drive.google.com/file/d/')) {
-      const fileId = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)?.[1];
-      return fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
-    }
-    
-    // Vimeo URLs
-    if (url.includes('vimeo.com/')) {
-      const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1];
-      return videoId ? `https://player.vimeo.com/video/${videoId}` : url;
-    }
-    
-    // Dailymotion URLs
-    if (url.includes('dailymotion.com/video/')) {
-      const videoId = url.match(/dailymotion\.com\/video\/([^_]+)/)?.[1];
-      return videoId ? `https://www.dailymotion.com/embed/video/${videoId}` : url;
-    }
-    
-    return url;
-  };
-
-  const handleEdit = (movie: ExtendedMovie) => {
-    setEditingMovie(movie);
-    setFormData({
-      title: movie.title,
-      category: movie.category,
-      genre: movie.genre,
-      releaseYear: movie.releaseYear.toString(),
-      duration: movie.duration,
-      rating: movie.rating.toString(),
-      posterUrl: movie.posterUrl,
-      videoUrl: movie.videoUrl,
-      description: movie.description,
-      language: movie.language || 'English',
-      tags: movie.tags || '',
-      telegramChannel: movie.telegramChannel || 'https://t.me/+nRJaGvh8DMNlMzNl',
-      downloadUrl: movie.downloadLinks?.[0]?.url || '',
-      trailerUrl: movie.trailerUrl || '',
-      isFeatured: movie.isFeatured || false,
-      releaseDate: movie.releaseDate || '',
-      isScheduled: movie.isScheduled || false,
-      commentsEnabled: movie.commentsEnabled !== false,
-      ratingsEnabled: movie.ratingsEnabled !== false
-    });
-  };
-
-  const handleDelete = async (movieId: string) => {
-    if (!confirm('Are you sure you want to delete this movie?')) return;
-    
-    try {
-      setLoading(true);
-      const { error } = await supabase
-        .from('movies')
-        .delete()
-        .eq('id', movieId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success!',
-        description: 'Movie deleted successfully',
-      });
-
-      onMoviesUpdate();
-    } catch (error: any) {
-      toast({
-        title: 'Delete failed',
-        description: `Error: ${error.message}`,
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
+  const handleVideoUrlBlur = () => {
+    if (currentFormData.videoUrl) {
+      setCurrentFormData(prev => ({ ...prev, videoUrl: convertVideoUrl(prev.videoUrl!) }));
     }
   };
 
-  const toggleFeatured = async (movieId: string, currentFeatured: boolean) => {
-    try {
-      // First, remove featured status from all movies
-      await supabase
-        .from('movies')
-        .update({ is_featured: false })
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      // Then set the selected movie as featured if it wasn't already
-      if (!currentFeatured) {
-        const { error } = await supabase
-          .from('movies')
-          .update({ is_featured: true })
-          .eq('id', movieId);
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: 'Success!',
-        description: currentFeatured ? 'Removed from featured' : 'Set as featured movie',
-      });
-
-      onMoviesUpdate();
-    } catch (error: any) {
-      toast({
-        title: 'Update failed',
-        description: `Error: ${error.message}`,
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+    if (!currentFormData.title) {
+      toast({ title: "Validation Error", description: "Title is required.", variant: "destructive" });
+      return;
+    }
+
+    const movieDataForSubmit = { ...currentFormData };
+    // Remove id if it's a new movie, as Firestore generates it
+    if (!editingMovie?.id) {
+      delete movieDataForSubmit.id;
+    }
+
+    // Ensure all necessary fields for Movie (excluding id, Timestamps for add)
+    // are present or have defaults
+    const dataToSave: Omit<Movie, 'id' | 'createdAt' | 'updatedAt'> = {
+        title: movieDataForSubmit.title!,
+        description: movieDataForSubmit.description || '',
+        posterUrl: movieDataForSubmit.posterUrl || '',
+        videoUrl: movieDataForSubmit.videoUrl || '',
+        downloadUrl: movieDataForSubmit.downloadUrl || '',
+        genre: movieDataForSubmit.genre || '',
+        category: movieDataForSubmit.category || '',
+        rating: Number(movieDataForSubmit.rating) || 0,
+        duration: movieDataForSubmit.duration || '',
+        releaseYear: Number(movieDataForSubmit.releaseYear) || new Date().getFullYear(),
+        language: movieDataForSubmit.language || '',
+        tags: movieDataForSubmit.tags || '',
+        trailerUrl: movieDataForSubmit.trailerUrl || '',
+        isFeatured: movieDataForSubmit.isFeatured || false,
+        // viewCount & downloadCount are typically managed by backend triggers or separate updates
+    };
+
     try {
-      setLoading(true);
-      
-      if (!formData.title || !formData.category || !formData.genre ||
-          !formData.releaseYear || !formData.duration || !formData.rating ||
-          !formData.posterUrl || !formData.videoUrl) {
-        toast({
-          title: 'Missing fields',
-          description: 'Please fill all required fields',
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      const processedVideoUrl = convertVideoUrl(formData.videoUrl);
-      
-      const movieData = {
-        title: formData.title,
-        description: formData.description,
-        poster_url: formData.posterUrl,
-        video_url: processedVideoUrl,
-        genre: formData.genre,
-        category: formData.category,
-        duration: formData.duration,
-        rating: parseFloat(formData.rating),
-        release_year: parseInt(formData.releaseYear),
-        trailer_url: formData.trailerUrl,
-        download_url: formData.downloadUrl,
-        is_featured: formData.isFeatured,
-        language: formData.language,
-        tags: formData.tags
-      };
-
-      let result;
-      if (editingMovie) {
-        result = await supabase
-          .from('movies')
-          .update(movieData)
-          .eq('id', editingMovie.id)
-          .select();
+      if (editingMovie?.id) {
+        // Update existing movie
+        await updateVideo(editingMovie.id, dataToSave);
+        toast({ title: "Movie Updated", description: "Movie details saved successfully." });
       } else {
-        result = await supabase
-          .from('movies')
-          .insert([movieData])
-          .select();
+        // Add new movie
+        await addVideo(dataToSave);
+        toast({ title: "Movie Added", description: "New movie created successfully." });
       }
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      toast({
-        title: 'Success!',
-        description: editingMovie ? 'Movie updated successfully' : 'Movie added successfully',
-      });
-
-      resetForm();
       onMoviesUpdate();
-    } catch (error: any) {
-      console.error('Operation error:', error);
-      toast({
-        title: editingMovie ? 'Update failed' : 'Upload failed',
-        description: `Error: ${error.message || 'Unknown error'}`,
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
+      setIsFormOpen(false);
+      setEditingMovie(null);
+    } catch (error) {
+      console.error("Error saving movie:", error);
+      toast({ title: "Error", description: (error as Error).message || "Failed to save movie.", variant: "destructive" });
+    }
+  };
+
+  const openEditForm = (movie: Movie) => {
+    setEditingMovie(movie);
+    setIsFormOpen(true);
+  };
+
+  const openAddForm = () => {
+    setEditingMovie(null);
+    setCurrentFormData(initialMovieFormData); // Reset form for new movie
+    setIsFormOpen(true);
+  };
+
+  const confirmDeleteMovie = (movie: Movie) => {
+    setMovieToDelete(movie);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteMovie = async () => {
+    if (movieToDelete?.id) {
+      try {
+        await deleteVideo(movieToDelete.id);
+        toast({ title: "Movie Deleted", description: `\"${movieToDelete.title}\" has been deleted.` });
+        onMoviesUpdate();
+        setIsDeleteDialogOpen(false);
+        setMovieToDelete(null);
+      } catch (error) {
+        console.error("Error deleting movie:", error);
+        toast({ title: "Error", description: (error as Error).message || "Failed to delete movie.", variant: "destructive" });
+      }
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Add/Edit Movie Form */}
-      <Card className="bg-gray-900 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-white">
-            {editingMovie ? 'Edit Movie' : 'Add New Movie'}
-          </CardTitle>
-          <CardDescription className="text-gray-400">
-            Add movies with automatic URL conversion and featured movie selection
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-white">Title *</Label>
-                <Input 
-                  id="title" 
-                  placeholder="Enter movie title" 
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="category" className="text-white">Category *</Label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => handleSelectChange(value, 'category')}
-                >
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    <SelectItem value="latest">Latest</SelectItem>
-                    <SelectItem value="trending">Trending</SelectItem>
-                    <SelectItem value="webseries">Web Series</SelectItem>
-                    <SelectItem value="movies">Movies</SelectItem>
-                    <SelectItem value="livetv">Live TV</SelectItem>
-                  </SelectContent>
+    <div className="p-4 bg-gray-900/50 rounded-lg shadow">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-white">Manage Movies</h2>
+        <Button onClick={openAddForm} className="bg-red-600 hover:bg-red-700 text-white">
+          <PlusCircle className="w-4 h-4 mr-2" /> Add New Movie
+        </Button>
+      </div>
+
+      {/* Movie Form Dialog */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="bg-gray-900 text-white border-gray-700 sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-500">{editingMovie ? 'Edit Movie' : 'Add New Movie'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+            <Input name="title" placeholder="Title" value={currentFormData.title || ''} onChange={handleInputChange} required className="bg-gray-800 border-gray-700" />
+            <Textarea name="description" placeholder="Description" value={currentFormData.description || ''} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
+            <Input name="posterUrl" placeholder="Poster URL" value={currentFormData.posterUrl || ''} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
+            <Input name="videoUrl" placeholder="Video URL (YouTube/Google Drive)" value={currentFormData.videoUrl || ''} onChange={handleInputChange} onBlur={handleVideoUrlBlur} className="bg-gray-800 border-gray-700" />
+            <Input name="downloadUrl" placeholder="Download URL" value={currentFormData.downloadUrl || ''} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
+            <Input name="trailerUrl" placeholder="Trailer URL" value={currentFormData.trailerUrl || ''} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
+            
+            <div className="grid grid-cols-2 gap-4">
+                <Select name="genre" value={currentFormData.genre || ''} onValueChange={(value) => handleSelectChange('genre', value)}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue placeholder="Select Genre" /></SelectTrigger>
+                    <SelectContent className="bg-gray-800 text-white border-gray-700">
+                        {genres.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="genre" className="text-white">Genre *</Label>
-                <Select 
-                  value={formData.genre} 
-                  onValueChange={(value) => handleSelectChange(value, 'genre')}
-                >
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select genre" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    {genres.map(genre => (
-                      <SelectItem key={genre} value={genre}>{genre}</SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select name="language" value={currentFormData.language || ''} onValueChange={(value) => handleSelectChange('language', value)}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue placeholder="Select Language" /></SelectTrigger>
+                    <SelectContent className="bg-gray-800 text-white border-gray-700">
+                        {languages.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
                 </Select>
-              </div>
+            </div>
+            
+            <Input name="category" placeholder="Category (e.g., Movie, Series)" value={currentFormData.category || ''} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
+            <Input name="tags" placeholder="Tags (comma-separated)" value={currentFormData.tags || ''} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
 
-              <div className="space-y-2">
-                <Label htmlFor="language" className="text-white">Language</Label>
-                <Select 
-                  value={formData.language} 
-                  onValueChange={(value) => handleSelectChange(value, 'language')}
-                >
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    {languages.map(lang => (
-                      <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="releaseYear" className="text-white">Release Year *</Label>
-                <Input 
-                  id="releaseYear" 
-                  type="number" 
-                  placeholder="2024" 
-                  value={formData.releaseYear}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required 
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="duration" className="text-white">Duration *</Label>
-                <Input 
-                  id="duration" 
-                  placeholder="e.g., 2h 30m" 
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required 
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="rating" className="text-white">Rating *</Label>
-                <Input 
-                  id="rating" 
-                  type="number" 
-                  step="0.1" 
-                  max="10" 
-                  placeholder="8.5" 
-                  value={formData.rating}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required 
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="releaseDate" className="text-white">Release Date (Optional)</Label>
-                <Input 
-                  id="releaseDate" 
-                  type="date"
-                  value={formData.releaseDate}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="posterUrl" className="text-white">Poster URL *</Label>
-                <Input 
-                  id="posterUrl" 
-                  type="url" 
-                  placeholder="https://example.com/poster.jpg" 
-                  value={formData.posterUrl}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required 
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="trailerUrl" className="text-white">Trailer URL (YouTube)</Label>
-                <Input 
-                  id="trailerUrl" 
-                  type="url" 
-                  placeholder="https://youtube.com/watch?v=..." 
-                  value={formData.trailerUrl}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="videoUrl" className="text-white">Google Drive Video URL *</Label>
-                <Input 
-                  id="videoUrl" 
-                  type="url" 
-                  placeholder="https://drive.google.com/file/d/FILE_ID/view" 
-                  value={formData.videoUrl}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required 
-                />
-                <p className="text-xs text-gray-400">Will be converted to preview link automatically</p>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="downloadUrl" className="text-white">Download URL</Label>
-                <Input 
-                  id="downloadUrl" 
-                  type="url" 
-                  placeholder="https://drive.google.com/file/..." 
-                  value={formData.downloadUrl}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="tags" className="text-white">Tags (SEO)</Label>
-                <Input 
-                  id="tags" 
-                  placeholder="action, thriller, superhero" 
-                  value={formData.tags}
-                  onChange={handleInputChange}
-                  className="bg-gray-800 border-gray-600 text-white"
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-4">
+                <Input name="rating" type="number" placeholder="Rating (0-10)" value={currentFormData.rating || 0} onChange={handleInputChange} step="0.1" min="0" max="10" className="bg-gray-800 border-gray-700" />
+                <Input name="duration" placeholder="Duration (e.g., 2h 15m)" value={currentFormData.duration || ''} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
+                <Input name="releaseYear" type="number" placeholder="Release Year" value={currentFormData.releaseYear || new Date().getFullYear()} onChange={handleInputChange} className="bg-gray-800 border-gray-700" />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-white">Description</Label>
-              <Textarea 
-                id="description" 
-                placeholder="Enter detailed description..." 
-                rows={4}
-                value={formData.description}
-                onChange={handleInputChange}
-                className="bg-gray-800 border-gray-600 text-white"
-              />
+            <div className="flex items-center space-x-2">
+              <Checkbox id="isFeatured" name="isFeatured" checked={currentFormData.isFeatured || false} onCheckedChange={(checked) => setCurrentFormData(prev => ({ ...prev, isFeatured: !!checked }))} />
+              <label htmlFor="isFeatured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Featured Movie</label>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="featured"
-                  checked={formData.isFeatured}
-                  onCheckedChange={(checked) => 
-                    setFormData({...formData, isFeatured: checked})
-                  }
-                />
-                <Label htmlFor="featured" className="text-white">Featured</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="scheduled"
-                  checked={formData.isScheduled}
-                  onCheckedChange={(checked) => 
-                    setFormData({...formData, isScheduled: checked})
-                  }
-                />
-                <Label htmlFor="scheduled" className="text-white">Scheduled</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="comments"
-                  checked={formData.commentsEnabled}
-                  onCheckedChange={(checked) => 
-                    setFormData({...formData, commentsEnabled: checked})
-                  }
-                />
-                <Label htmlFor="comments" className="text-white">Comments</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="ratings"
-                  checked={formData.ratingsEnabled}
-                  onCheckedChange={(checked) => 
-                    setFormData({...formData, ratingsEnabled: checked})
-                  }
-                />
-                <Label htmlFor="ratings" className="text-white">Ratings</Label>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <Button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700">
-                <Plus className="w-4 h-4 mr-2" />
-                {loading ? (editingMovie ? 'Updating...' : 'Adding...') : (editingMovie ? 'Update Movie' : 'Add Movie')}
-              </Button>
-              {editingMovie && (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel Edit
-                </Button>
-              )}
-            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" className="hover:border-red-500 hover:text-red-500">Cancel</Button>
+              </DialogClose>
+              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white">{editingMovie ? 'Save Changes' : 'Add Movie'}</Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
-      {/* Movies List */}
-      <Card className="bg-gray-900 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-white">Manage Movies</CardTitle>
-          <CardDescription className="text-gray-400">
-            Edit, delete, or set movies as featured
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {movies.map((movie) => (
-              <div key={movie.id} className="bg-gray-800 rounded-lg p-4 space-y-3">
-                <div className="flex items-start space-x-3">
-                  <img 
-                    src={movie.posterUrl} 
-                    alt={movie.title}
-                    className="w-16 h-20 object-cover rounded"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder.svg';
-                    }}
-                  />
-                  <div className="flex-1">
-                    <h3 className="text-white font-semibold line-clamp-2">{movie.title}</h3>
-                    <p className="text-gray-400 text-sm">{movie.genre} • {movie.releaseYear}</p>
-                    <p className="text-gray-400 text-sm capitalize">{movie.category}</p>
-                    {movie.isFeatured && (
-                      <div className="flex items-center text-yellow-500 text-sm mt-1">
-                        <Star className="w-3 h-3 mr-1 fill-current" />
-                        Featured
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(movie)}
-                    className="flex-1"
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={movie.isFeatured ? "default" : "outline"}
-                    onClick={() => toggleFeatured(movie.id, movie.isFeatured || false)}
-                    className={movie.isFeatured ? "bg-yellow-600 hover:bg-yellow-700" : ""}
-                  >
-                    <Star className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(movie.id)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-gray-900 text-white border-gray-700 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center"><AlertTriangle className="w-5 h-5 mr-2 text-yellow-400"/>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Are you sure you want to delete the movie "<strong>{movieToDelete?.title}</strong>"? This action cannot be undone.</p>
           </div>
-        </CardContent>
-      </Card>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" className="hover:border-gray-500">Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleDeleteMovie} className="bg-yellow-600 hover:bg-yellow-700 text-white">Delete Movie</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Movies Table */}
+      <div className="overflow-x-auto">
+        <Table className="min-w-full divide-y divide-gray-700">
+          <TableHeader>
+            <TableRow className="hover:bg-gray-800/0">
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Title</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Genre</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Language</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Year</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Featured</TableHead>
+              <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-700">
+            {movies.length > 0 ? movies.map((movie) => (
+              <TableRow key={movie.id} className="hover:bg-gray-800/50">
+                <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{movie.title}</TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{movie.genre}</TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{movie.language}</TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{movie.releaseYear}</TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                  <Checkbox checked={movie.isFeatured} disabled className="data-[state=checked]:bg-red-500" />
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => openEditForm(movie)} className="text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black">
+                    <Edit className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => confirmDeleteMovie(movie)} className="text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black">
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )) : (
+              <TableRow>
+                <TableCell colSpan={6} className="px-6 py-12 text-center text-sm text-gray-400">
+                  No movies found. Add a new movie to get started.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

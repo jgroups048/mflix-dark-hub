@@ -1,9 +1,9 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Menu, X, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
+import { getSiteSettings } from '@/lib/firebaseServices/siteSettingsService';
 
 interface HeaderProps {
   onSearch: (query: string) => void;
@@ -12,7 +12,27 @@ interface HeaderProps {
 const Header = ({ onSearch }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const settings = await getSiteSettings();
+        if (settings && settings.logoUrl) {
+          setLogoUrl(settings.logoUrl);
+          console.log("Fetched Logo URL:", settings.logoUrl);
+        } else {
+          setLogoUrl('/default-logo.png');
+          console.log("No logoUrl found or settings missing, using fallback.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch logo:", error);
+        setLogoUrl('/default-logo.png');
+      }
+    };
+    fetchLogo();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,10 +57,18 @@ const Header = ({ onSearch }: HeaderProps) => {
               className="cursor-pointer flex items-center space-x-3"
               onClick={() => navigate('/')}
             >
-              <span className="text-red-500 text-2xl font-bold tracking-wider drop-shadow-lg">
-                Entertainment<br />
-                <span className="ml-8">Hub</span>
-              </span>
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Site Logo" 
+                  className="h-14 sm:h-16 md:h-20 object-contain"
+                />
+              ) : (
+                <span className="text-red-500 text-2xl font-bold tracking-wider drop-shadow-lg">
+                  Entertainment<br />
+                  <span className="ml-8">Hub</span>
+                </span>
+              )}
             </div>
           </div>
 
@@ -69,13 +97,6 @@ const Header = ({ onSearch }: HeaderProps) => {
               className="text-white hover:text-red-500 transition-colors font-semibold"
             >
               Popular
-            </button>
-            <button 
-              onClick={() => navigate('/admin')} 
-              className="text-white hover:text-red-500 transition-colors font-semibold flex items-center space-x-1"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Admin</span>
             </button>
           </nav>
 
@@ -131,13 +152,6 @@ const Header = ({ onSearch }: HeaderProps) => {
                 className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2"
               >
                 Popular Right Now
-              </button>
-              <button 
-                onClick={() => { navigate('/admin'); setIsMenuOpen(false); }} 
-                className="text-white hover:text-red-500 transition-colors text-left font-semibold py-2 flex items-center space-x-1"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Admin Panel</span>
               </button>
             </nav>
             

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
@@ -6,11 +5,11 @@ import MovieGrid from '@/components/MovieGrid';
 import DownloadSection from '@/components/DownloadSection';
 import Footer from '@/components/Footer';
 import SocialMediaButtons from '@/components/SocialMediaButtons';
-import { supabase } from '@/integrations/supabase/client';
-import { Movie } from '@/types/movie';
+import { getAllVideos, Movie } from '@/lib/firebaseServices/videoService';
 import { useToast } from '@/hooks/use-toast';
+import HeroTrailer from '@/components/HeroTrailer';
 
-const HomePage = () => {
+const HomePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,39 +20,18 @@ const HomePage = () => {
     console.log('Entertainment Hub - Your Ultimate Entertainment Destination');
   }, []);
 
-  // Fetch movies from database
+  // Fetch movies from Firebase
   useEffect(() => {
     const fetchMovies = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('movies')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          setMovies(data.map(movie => ({
-            id: movie.id,
-            title: movie.title,
-            description: movie.description || '',
-            posterUrl: movie.poster_url,
-            videoUrl: movie.video_url,
-            genre: movie.genre,
-            category: movie.category as any,
-            rating: movie.rating,
-            duration: movie.duration,
-            releaseYear: movie.release_year
-          })));
-        }
+        const fetchedMovies = await getAllVideos();
+        setMovies(fetchedMovies);
       } catch (error) {
         console.error('Error fetching movies:', error);
         toast({
-          title: 'Welcome to Entertainment Hub',
-          description: 'Loading your favorite content...',
+          title: 'Error Loading Content',
+          description: 'Could not load movie data. Please try again later.',
         });
       } finally {
         setLoading(false);
@@ -63,13 +41,11 @@ const HomePage = () => {
     fetchMovies();
   }, [toast]);
 
-  const featuredMovie = useMemo(() => movies[0], [movies]);
-
   const filteredMovies = useMemo(() => {
     if (!searchQuery) return movies;
     return movies.filter(movie =>
-      movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      movie.genre.toLowerCase().includes(searchQuery.toLowerCase())
+      (movie.title && movie.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (movie.genre && movie.genre.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [searchQuery, movies]);
 
@@ -78,15 +54,16 @@ const HomePage = () => {
       latest: filteredMovies.filter(movie => movie.category === 'latest' || movie.category === 'movies').slice(0, 12),
       webseries: filteredMovies.filter(movie => movie.category === 'webseries').slice(0, 12),
       trending: filteredMovies.slice(0, 12),
-      topPicks: filteredMovies.filter(movie => movie.rating >= 8).slice(0, 10),
+      topPicks: filteredMovies.filter(movie => movie.rating && movie.rating >= 8).slice(0, 10),
     };
   }, [filteredMovies]);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="bg-black min-h-screen">
       <Header onSearch={setSearchQuery} />
+      <HeroTrailer />
       
-      {!searchQuery && <HeroSection featuredMovie={featuredMovie} />}
+      {!searchQuery && <HeroSection />}
       
       <main className="pb-8">
         {loading ? (
@@ -103,7 +80,6 @@ const HomePage = () => {
           />
         ) : (
           <>
-            {/* Netflix-style Horizontal Carousels */}
             <MovieGrid
               title="🎬 Latest Movies"
               movies={moviesByCategory.latest}
@@ -124,8 +100,6 @@ const HomePage = () => {
               movies={moviesByCategory.topPicks}
               id="top10"
             />
-
-            {/* Download Sections */}
             <DownloadSection 
               title="💾 Download Latest Movies"
               contentType="movies"

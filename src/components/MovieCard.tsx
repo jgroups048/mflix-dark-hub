@@ -1,6 +1,5 @@
-
 import { Play } from 'lucide-react';
-import { Movie } from '@/types/movie';
+import { Movie } from '@/lib/firebaseServices/videoService';
 import { useNavigate } from 'react-router-dom';
 
 interface MovieCardProps {

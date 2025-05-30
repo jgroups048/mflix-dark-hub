@@ -1,12 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { ExtendedMovie, AdminSettings as AdminSettingsType, Analytics, UserRole } from '@/types/admin';
+import { getAllVideos, Movie } from '@/lib/firebaseServices/videoService';
+import { AdminSettings as AdminSettingsType, Analytics, ExtendedMovie, UserRole } from '@/types/admin';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import MovieManager from '@/components/admin/MovieManager';
 import AnalyticsSection from '@/components/admin/AnalyticsSection';
@@ -15,11 +14,12 @@ import BulkImport from '@/components/admin/BulkImport';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AdManager from '@/components/admin/AdManager';
 import SiteCustomization from '@/components/admin/SiteCustomization';
+import SplashScreenAdmin from '@/components/admin/SplashScreenAdmin';
 
 const AdminPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [movies, setMovies] = useState<ExtendedMovie[]>([]);
+  const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
   const [genres, setGenres] = useState<string[]>(['Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Romance', 'Thriller', 'Adventure', 'Animation', 'Crime', 'Documentary', 'Fantasy', 'Mystery']);
   const [languages, setLanguages] = useState<string[]>(['English', 'Hindi', 'Tamil', 'Telugu', 'Malayalam', 'Kannada', 'Bengali', 'Gujarati', 'Marathi', 'Punjabi']);
@@ -35,7 +35,7 @@ const AdminPage = () => {
   const [adminSettings, setAdminSettings] = useState<AdminSettingsType>({
     adsEnabled: true,
     adInterval: 10,
-    database: 'supabase',
+    database: 'firebase',
     homePageBanner: '',
     videoBanner: '',
     midRollAd: '',
@@ -63,44 +63,13 @@ const AdminPage = () => {
   const fetchMovies = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('movies')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        setMovies(data.map(movie => ({
-          id: movie.id,
-          title: movie.title,
-          description: movie.description || '',
-          posterUrl: movie.poster_url,
-          videoUrl: movie.video_url,
-          genre: movie.genre,
-          category: movie.category as any,
-          rating: movie.rating,
-          duration: movie.duration,
-          releaseYear: movie.release_year,
-          language: movie.language || 'English',
-          tags: movie.tags || '',
-          telegramChannel: 'https://t.me/+nRJaGvh8DMNlMzNl',
-          downloadLinks: movie.download_url ? [{
-            quality: 'HD',
-            url: movie.download_url,
-            size: 'Unknown'
-          }] : [],
-          trailerUrl: movie.trailer_url,
-          isFeatured: movie.is_featured || false,
-          viewCount: Math.floor(Math.random() * 10000) + (movie.id.length * 100),
-          downloadCount: Math.floor(Math.random() * 5000) + (movie.id.length * 50)
-        })));
-      }
+      const firestoreMovies = await getAllVideos();
+      setMovies(firestoreMovies);
     } catch (error) {
-      console.error('Error fetching movies:', error);
+      console.error('Error fetching movies from Firestore:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load movies',
+        description: 'Failed to load movies from Firestore',
         variant: 'destructive'
       });
     } finally {
@@ -124,7 +93,7 @@ const AdminPage = () => {
       totalViews: baseViews + Math.floor(Math.random() * 100),
       totalDownloads: baseDownloads + Math.floor(Math.random() * 50),
       adClicks: Math.floor(Math.random() * 1000) + 500,
-      topMovies: movies.slice(0, 5),
+      topMovies: movies.slice(0, 5) as any,
       recentActivity: []
     });
   };
@@ -169,12 +138,13 @@ const AdminPage = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-9 bg-gray-900 text-xs">
+          <TabsList className="grid w-full grid-cols-10 bg-gray-900 text-xs">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-red-600">Dashboard</TabsTrigger>
             <TabsTrigger value="movies" className="data-[state=active]:bg-red-600">Movies</TabsTrigger>
             <TabsTrigger value="analytics" className="data-[state=active]:bg-red-600">Analytics</TabsTrigger>
             <TabsTrigger value="ads" className="data-[state=active]:bg-red-600">Ads</TabsTrigger>
             <TabsTrigger value="site" className="data-[state=active]:bg-red-600">Site</TabsTrigger>
+            <TabsTrigger value="splashAdmin" className="data-[state=active]:bg-red-600">Splash (New)</TabsTrigger>
             <TabsTrigger value="notifications" className="data-[state=active]:bg-red-600">Notify</TabsTrigger>
             <TabsTrigger value="bulk" className="data-[state=active]:bg-red-600">Bulk</TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-red-600">Settings</TabsTrigger>
@@ -183,7 +153,7 @@ const AdminPage = () => {
 
           <TabsContent value="dashboard" className="mt-6">
             <AdminDashboard 
-              movies={movies}
+              movies={movies as ExtendedMovie[]}
               analytics={analytics}
               onAddContent={() => {}}
               onBulkImport={() => {}}
@@ -204,7 +174,7 @@ const AdminPage = () => {
           <TabsContent value="analytics" className="mt-6">
             <AnalyticsSection 
               analytics={analytics}
-              movies={movies}
+              movies={movies as ExtendedMovie[]}
             />
           </TabsContent>
 
@@ -214,6 +184,10 @@ const AdminPage = () => {
 
           <TabsContent value="site" className="mt-6">
             <SiteCustomization />
+          </TabsContent>
+
+          <TabsContent value="splashAdmin" className="mt-6">
+            <SplashScreenAdmin />
           </TabsContent>
 
           <TabsContent value="notifications" className="mt-6">
