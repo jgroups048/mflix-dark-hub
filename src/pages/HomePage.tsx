@@ -61,7 +61,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="bg-black min-h-screen">
       <Header onSearch={setSearchQuery} />
-      <HeroTrailer />
+      {/* <HeroTrailer /> */}
       
       {!searchQuery && <HeroSection />}
       
@@ -94,6 +94,7 @@ const HomePage: React.FC = () => {
               title="🔥 Trending Now"
               movies={moviesByCategory.trending}
               id="trending"
+              className="mt-8"
             />
             <MovieGrid
               title="⭐ Top 10 Picks"
