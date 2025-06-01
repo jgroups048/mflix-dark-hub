@@ -49,7 +49,7 @@ const Header = ({ onSearch }: HeaderProps) => {
 
   return (
     <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-md supports-[backdrop-filter]:bg-black/90 border-b border-red-900/30">
-      <div className="container mx-auto px-6 sm:px-4 md:px-8 pt-6 pb-4 sm:py-4">
+      <div className="container mx-auto px-6 sm:px-4 md:px-8 pt-3 pb-2 sm:py-3">
         <div className="flex items-center justify-between">
           {/* Entertainment Hub Logo */}
           <div className="flex items-center space-x-4">
@@ -61,7 +61,7 @@ const Header = ({ onSearch }: HeaderProps) => {
                 <img 
                   src={logoUrl} 
                   alt="Site Logo" 
-                  className="h-16 sm:h-18 md:h-20 object-contain"
+                  className="h-12 sm:h-16 md:h-20 object-contain"
                 />
               ) : (
                 <span className="text-red-500 text-xl sm:text-2xl font-bold tracking-wider drop-shadow-lg">
