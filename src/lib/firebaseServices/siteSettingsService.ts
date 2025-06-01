@@ -10,6 +10,8 @@ export interface SiteSettings {
   heroLogoUrl?: string; // Added for Hero Section Logo
   videoOverlayLogoUrl?: string; // ADDED: For permanent video overlay logo
   videoOverlayPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'; // ADDED: Position for video overlay logo
+  watchPageSplashLogoUrl?: string; // ADDED: URL for WatchPage loading splash logo
+  watchPageSplashLogoSize?: 'small' | 'medium' | 'large'; // ADDED: Size for WatchPage loading splash logo
   splashScreen?: {
     enabled?: boolean;
     mode?: 'video' | 'image';          // ADDED: Splash mode selector

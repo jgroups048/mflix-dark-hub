@@ -17,6 +17,7 @@ const WatchPage = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [isWatching, setIsWatching] = useState(false);
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
+  const [siteSettingsLoaded, setSiteSettingsLoaded] = useState(false);
   
   useEffect(() => {
     const loadSiteSettings = async () => {
@@ -25,6 +26,8 @@ const WatchPage = () => {
         setSiteSettings(settings);
       } catch (error) {
         console.error('Error fetching site settings for WatchPage splash:', error);
+      } finally {
+        setSiteSettingsLoaded(true);
       }
     };
     loadSiteSettings();
@@ -80,18 +83,43 @@ const WatchPage = () => {
   };
 
   if (showSplash) {
-    const logoToDisplay = siteSettings?.logoUrl || FALLBACK_WATCH_LOGO_URL;
+    if (!siteSettingsLoaded) {
+      return (
+        <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+          <div 
+            className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"
+            role="status"
+          >
+            <span className="sr-only">Loading settings...</span>
+          </div>
+        </div>
+      );
+    }
+
+    const logoToDisplay = siteSettings?.watchPageSplashLogoUrl || siteSettings?.logoUrl || FALLBACK_WATCH_LOGO_URL;
+    console.log('WatchPage Splash: Attempting to load logo (after settings attempt):', logoToDisplay);
+
+    let logoSizeClasses = "w-40 sm:w-48 md:w-56 max-h-40 sm:max-h-48 md:max-h-56"; // Default to medium
+    if (siteSettings?.watchPageSplashLogoSize === 'small') {
+      logoSizeClasses = "w-32 sm:w-36 md:w-40 max-h-32 sm:max-h-36 md:max-h-40";
+    } else if (siteSettings?.watchPageSplashLogoSize === 'large') {
+      logoSizeClasses = "w-48 sm:w-56 md:w-64 max-h-48 sm:max-h-56 md:max-h-64";
+    }
+
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center">
         {logoToDisplay ? (
             <img 
               src={logoToDisplay} 
               alt="Loading Logo" 
-              className="w-32 h-auto sm:w-40 md:w-48 mx-auto mb-6 animate-pulse"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              className={`${logoSizeClasses} object-contain mx-auto mb-4 animate-pulse`}
+              onError={(e) => { 
+                console.error('Error loading splash logo:', logoToDisplay, e);
+                (e.target as HTMLImageElement).style.display = 'none'; 
+              }}
             />
           ) : (
-            <div className="h-20 mb-6"></div>
+            <div className="h-20 mb-4"></div>
         )}
         <div 
           className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"

@@ -38,6 +38,8 @@ const initialSiteSettingsData: SiteSettings = {
     heroLogoUrl: '',
     videoOverlayLogoUrl: '',
     videoOverlayPosition: 'bottom-right',
+    watchPageSplashLogoUrl: '',
+    watchPageSplashLogoSize: 'medium',
     splashScreen: {
       enabled: true,
       mode: 'image',
@@ -78,6 +80,7 @@ const SiteCustomization = () => {
   const [splashLogoSaving, setSplashLogoSaving] = useState(false);
   const [heroLogoSaving, setHeroLogoSaving] = useState(false);
   const [videoOverlayLogoSaving, setVideoOverlayLogoSaving] = useState(false);
+  const [watchPageLogoSettingsSaving, setWatchPageLogoSettingsSaving] = useState(false);
   const [themeSaving, setThemeSaving] = useState(false);
   const [allSettingsSaving, setAllSettingsSaving] = useState(false);
   const [showTestSplash, setShowTestSplash] = useState(false);
@@ -270,7 +273,22 @@ const SiteCustomization = () => {
     setHeroLogoSaving(false);
   };
 
-  const anySavingInProgress = siteSettingsLoading || logoSaving || splashLogoSaving || heroLogoSaving || videoOverlayLogoSaving || themeSaving || allSettingsSaving || trailerLoading;
+  const handleSaveWatchPageLogoSettings = async () => {
+    setWatchPageLogoSettingsSaving(true);
+    try {
+      await updateSiteSettings({ 
+        watchPageSplashLogoUrl: siteSettings.watchPageSplashLogoUrl || '',
+        watchPageSplashLogoSize: siteSettings.watchPageSplashLogoSize || 'medium'
+      });
+      toast({ title: 'Watch Page Logo Settings Updated', description: 'Watch Page loading logo URL and size updated successfully.' });
+    } catch (error) {
+      console.error("Error saving Watch Page logo settings:", error);
+      toast({ title: 'Watch Page Logo Settings Save Failed', description: (error as Error).message || 'Could not save Watch Page logo settings.', variant: 'destructive' });
+    }
+    setWatchPageLogoSettingsSaving(false);
+  };
+
+  const anySavingInProgress = siteSettingsLoading || logoSaving || splashLogoSaving || heroLogoSaving || videoOverlayLogoSaving || watchPageLogoSettingsSaving || themeSaving || allSettingsSaving || trailerLoading;
 
   return (
     <div className="space-y-8 p-4 md:p-6">
@@ -391,6 +409,55 @@ const SiteCustomization = () => {
                 <SelectItem value="bottom-right">Bottom Right</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Watch Page Loading Logo URL - NEW */}
+          <div className="space-y-2">
+            <Label htmlFor="watchPageSplashLogoUrl">Watch Page Loading Logo URL</Label>
+            <Input 
+              id="watchPageSplashLogoUrl" 
+              value={siteSettings.watchPageSplashLogoUrl || ''} 
+              onChange={(e) => handleSiteSettingChange('watchPageSplashLogoUrl', e.target.value)} 
+              placeholder="https://example.com/watch-splash-logo.png"
+              className="bg-gray-800 border-gray-600"
+              disabled={anySavingInProgress || watchPageLogoSettingsSaving}
+            />
+            <p className="text-sm text-gray-400">
+              Optional. If set, this logo will be used on the loading screen before a video plays. Otherwise, the Main Site Logo will be used.
+            </p>
+          </div>
+
+          {/* Watch Page Loading Logo Size */}
+          <div className="space-y-2">
+            <Label htmlFor="watchPageSplashLogoSize">Watch Page Loading Logo Size</Label>
+            <Select 
+              value={siteSettings.watchPageSplashLogoSize || 'medium'}
+              onValueChange={(value) => handleSiteSettingChange('watchPageSplashLogoSize', value as 'small' | 'medium' | 'large')}
+              disabled={anySavingInProgress || watchPageLogoSettingsSaving}
+            >
+              <SelectTrigger id="watchPageSplashLogoSize" className="w-full bg-gray-800 border-gray-600">
+                <SelectValue placeholder="Select size" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 text-white border-gray-700">
+                <SelectItem value="small">Small</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="large">Large</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-400">
+              Controls the logo size on the loading screen before a video starts playing.
+            </p>
+          </div>
+
+          {/* Save Button for Watch Page Logo Settings */}
+          <div className="pt-2"> 
+            <Button 
+              onClick={handleSaveWatchPageLogoSettings} 
+              disabled={anySavingInProgress || watchPageLogoSettingsSaving} 
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+            >
+              {watchPageLogoSettingsSaving ? 'Saving Watch Page Logo...' : <><Save className="w-4 h-4 mr-2"/> Save Watch Page Logo Settings</>}
+            </Button>
           </div>
         </CardContent>
       </Card>
