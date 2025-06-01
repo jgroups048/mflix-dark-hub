@@ -53,18 +53,18 @@ const Header = ({ onSearch }: HeaderProps) => {
         <div className="flex items-center justify-between">
           {/* Entertainment Hub Logo */}
           <div className="flex items-center space-x-4">
-            <div 
-              className="cursor-pointer flex items-center space-x-3"
+            <div
+              className="cursor-pointer flex items-center w-1/4"
               onClick={() => navigate('/')}
             >
               {logoUrl ? (
-                <img 
-                  src={logoUrl} 
-                  alt="Site Logo" 
-                  className="h-12 sm:h-16 md:h-20 object-contain"
+                <img
+                  src={logoUrl}
+                  alt="Site Logo"
+                  className="w-full h-auto object-contain"
                 />
               ) : (
-                <span className="text-red-500 text-xl sm:text-2xl font-bold tracking-wider drop-shadow-lg">
+                <span className="text-red-500 text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider drop-shadow-lg w-full text-center">
                   MFLIX
                 </span>
               )}

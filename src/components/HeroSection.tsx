@@ -8,7 +8,7 @@ import { getHeaderTrailer, HeaderTrailer } from '@/lib/firebaseServices/trailerS
 import { getFeaturedMovie, Movie } from '@/lib/firebaseServices/videoService'; // Added getFeaturedMovie
 import { db } from '@/lib/firebase'; // Added for collection, query, where, limit, getDocs if direct firestore needed, though getFeaturedMovie encapsulates it
 import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore'; // Keep for direct queries if necessary, or ensure services cover all cases
-import { getSiteSettings } from '@/lib/firebaseServices/siteSettingsService'; // Added
+import { getSiteSettings, SiteSettings } from '@/lib/firebaseServices/siteSettingsService'; // Modified
 
 // Helper function to extract YouTube video ID (assuming this is generic enough)
 const extractYouTubeId = (url: string): string | null => {
@@ -32,15 +32,17 @@ const HeroSection = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fetchedHeroLogoUrl, setFetchedHeroLogoUrl] = useState<string | null>(null);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null); // Added
 
   useEffect(() => {
     const fetchHeroData = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch site settings for hero logo first
+        // Fetch site settings first
         try {
           const settings = await getSiteSettings();
+          setSiteSettings(settings); // Store all settings
           if (settings && settings.heroLogoUrl && settings.heroLogoUrl.trim() !== '') {
             setFetchedHeroLogoUrl(settings.heroLogoUrl);
             console.log("Hero Section Logo URL (from effect):", settings.heroLogoUrl);
@@ -49,8 +51,9 @@ const HeroSection = () => {
             console.log("No valid heroLogoUrl found in site settings.");
           }
         } catch (settingsError) {
-          console.error("Error fetching site settings for hero logo:", settingsError);
+          console.error("Error fetching site settings for hero section:", settingsError);
           setFetchedHeroLogoUrl(null);
+          // Do not set siteSettings to null here, as other parts might use it or it might be partially fetched
         }
 
         const firestoreTrailer = await getHeaderTrailer();
@@ -146,6 +149,21 @@ const HeroSection = () => {
             allowFullScreen
             style={{ width: 'calc(100% + 200px)', height: 'calc(100% + 200px)', pointerEvents: 'none' }}
           />
+          {/* Video Overlay Logo - Mobile */}
+          {siteSettings?.videoOverlayLogoUrl && (
+            <img 
+              src={siteSettings.videoOverlayLogoUrl}
+              alt="Site Watermark"
+              className={[
+                "absolute object-contain opacity-75 pointer-events-none z-10",
+                "h-8 sm:h-10",
+                siteSettings.videoOverlayPosition === 'top-left' && 'top-2 left-2',
+                (!siteSettings.videoOverlayPosition || siteSettings.videoOverlayPosition === 'top-right') && 'top-2 right-2',
+                siteSettings.videoOverlayPosition === 'bottom-left' && 'bottom-2 left-2',
+                siteSettings.videoOverlayPosition === 'bottom-right' && 'bottom-2 right-2',
+              ].filter(Boolean).join(' ')}
+            />
+          )}
         </div>
 
         {/* Content Container (Below Video) */}
@@ -202,6 +220,22 @@ const HeroSection = () => {
           />
         </div>
 
+        {/* Video Overlay Logo - Desktop */}
+        {siteSettings?.videoOverlayLogoUrl && (
+          <img 
+            src={siteSettings.videoOverlayLogoUrl}
+            alt="Site Watermark"
+            className={[
+              "absolute object-contain opacity-75 pointer-events-none z-30",
+              "h-10 sm:h-12 md:h-14",
+              siteSettings.videoOverlayPosition === 'top-left' && 'top-4 left-4',
+              (!siteSettings.videoOverlayPosition || siteSettings.videoOverlayPosition === 'top-right') && 'top-4 right-4',
+              siteSettings.videoOverlayPosition === 'bottom-left' && 'bottom-4 left-4',
+              siteSettings.videoOverlayPosition === 'bottom-right' && 'bottom-4 right-4',
+            ].filter(Boolean).join(' ')}
+          />
+        )}
+
         {/* 3. Gradient Overlay */}
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-black from-25% via-black/90 via-60% to-transparent" />
 
@@ -239,7 +273,7 @@ const HeroSection = () => {
         </div>
 
         {/* 5. Hero Logo in top-left for mobile, bottom-right for larger screens */}
-        {fetchedHeroLogoUrl && (
+        {fetchedHeroLogoUrl && !siteSettings?.videoOverlayLogoUrl && ( // Only show if overlay is NOT set, to avoid double logos if same URL is used.
           <img 
             src={fetchedHeroLogoUrl}
             alt="Hero Logo"

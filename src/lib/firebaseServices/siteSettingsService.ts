@@ -8,7 +8,7 @@ export interface SiteSettings {
   siteTagline?: string;
   faviconUrl?: string; // For favicon image URL
   heroLogoUrl?: string; // Added for Hero Section Logo
-  videoOverlayLogoUrl?: string; // ADDED: For permanent video overlay logo
+  videoOverlayLogoUrl?: string; // Added for video watermark
   videoOverlayPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'; // ADDED: Position for video overlay logo
   watchPageSplashLogoUrl?: string; // ADDED: URL for WatchPage loading splash logo
   watchPageSplashLogoSize?: 'small' | 'medium' | 'large'; // ADDED: Size for WatchPage loading splash logo
@@ -43,6 +43,7 @@ export interface SiteSettings {
     metaDescription?: string;
     keywords?: string; // Comma-separated string
   };
+  splashSettings?: SplashSettings; 
   // Add other settings fields here if needed
   // Example: contactEmail?: string;
 }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { fetchVideoById, Movie } from '@/lib/firebaseServices/videoService';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, SiteSettings } from '@/lib/firebaseServices/siteSettingsService';
+import ReactPlayer from 'react-player/lazy';
 
 const FALLBACK_WATCH_LOGO_URL = '/defaults/default-mflix-logo.png';
 
@@ -75,11 +76,41 @@ const WatchPage = () => {
 
   const getGoogleDrivePreviewUrl = (url: string): string => {
     if (!url) return '#';
-    const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+
+    // Regex to extract File ID from various Google Drive URL formats
+    const fileIdMatch = url.match(
+      /\/d\/([a-zA-Z0-9-_]+)/
+    ) || url.match(
+      /[?&]id=([a-zA-Z0-9-_]+)/
+    );
+
     if (fileIdMatch && fileIdMatch[1]) {
-      return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+      const fileId = fileIdMatch[1];
+      // Attempt to use a more direct link format that might be playable
+      // export=view is sometimes better for direct embedding than export=download
+      return `https://drive.google.com/uc?export=view&id=${fileId}`;
     }
-    return url; 
+
+    // If it looks like a direct video file URL (e.g., .mp4, .m3u8), return it as is.
+    // This is a simple check and might need refinement.
+    if (/\.(mp4|m3u8|webm|ogv)$/i.test(url) || url.includes('googlevideo.com')) {
+      console.log('getGoogleDrivePreviewUrl: Detected as a direct video link or Google Video URL, returning as is:', url);
+      return url;
+    }
+    
+    // If it's already a /preview link, let it pass (though our goal is to avoid it)
+    // Or if it's an unknown GDrive link not matching the ID patterns.
+    if (url.includes('/preview') || url.includes('drive.google.com')) {
+        console.warn('getGoogleDrivePreviewUrl: URL is a Google Drive link but File ID not extracted or already a preview. Original URL returned:', url);
+        // Fallback for GDrive links where ID extraction failed, but still try to use it directly.
+        // If this is a /preview URL, ReactPlayer will likely fail.
+        // We could force it to an iframe structure here if needed later.
+        return url;
+    }
+
+    // Fallback for non-Google Drive URLs or unhandled formats
+    console.warn('getGoogleDrivePreviewUrl: URL is not a recognized Google Drive link format or direct video. Returning original URL:', url);
+    return url;
   };
 
   if (showSplash) {
@@ -172,6 +203,16 @@ const WatchPage = () => {
         : movie.videoUrl)
     : '#';
 
+  // Early return if siteSettings are not loaded yet when isWatching is true
+  if (isWatching && !siteSettingsLoaded) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 text-red-500 animate-spin" />
+        <p className="text-white mt-2">Loading player settings...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="sticky top-0 z-50 bg-black/95 backdrop-blur border-b border-red-900/30">
@@ -236,27 +277,60 @@ const WatchPage = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="relative">
-              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden shadow-2xl">
-                <iframe
-                  src={videoEmbedUrl}
-                  title={movie.title}
-                  className="w-full h-full"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                />
+            <div className="relative isolate">
+              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden shadow-2xl player-wrapper">
+                {(() => { console.log("Video URL for ReactPlayer (or iframe src):", videoEmbedUrl); return null; })()}
+                {videoEmbedUrl && videoEmbedUrl.includes('drive.google.com') ? (
+                  <iframe
+                    src={videoEmbedUrl.replace(/uc\?export=view&id=/, 'file/d/') + '/preview'} // Convert to /preview for iframe
+                    width="100%"
+                    height="100%"
+                    allowFullScreen
+                    allow="autoplay; encrypted-media"
+                    title={`Movie Player - ${movie.title}`}
+                    className="react-player" // Keep same class for sizing if needed
+                    sandbox="allow-scripts allow-same-origin allow-presentation"
+                  ></iframe>
+                ) : (
+                  <ReactPlayer
+                    className="react-player"
+                    url={videoEmbedUrl}
+                    width="100%"
+                    height="100%"
+                    playing={true}
+                    controls={true}
+                    config={{
+                      file: {
+                        attributes: {
+                          // If you need specific attributes for <video> element
+                        }
+                      },
+                      youtube: {
+                        playerVars: { 
+                          showinfo: 0, 
+                          modestbranding: 1, 
+                          rel: 0, 
+                          iv_load_policy: 3,
+                          fs: 1
+                        }
+                      }
+                    }}
+                    onError={(e) => console.error('ReactPlayer Error:', e)}
+                  />
+                )}
               </div>
+              {/* Video Overlay Logo - WatchPage */}
               {siteSettings?.videoOverlayLogoUrl && (
-                <img
+                <img 
                   src={siteSettings.videoOverlayLogoUrl}
-                  alt="Video Overlay Logo"
+                  alt="Site Watermark"
                   className={[
-                    'absolute object-contain opacity-75 z-30',
-                    'h-8 sm:h-10 md:h-12 lg:h-14',
-                    siteSettings.videoOverlayPosition === 'top-left' && 'top-2 left-2 sm:top-4 sm:left-4',
-                    siteSettings.videoOverlayPosition === 'top-right' && 'top-2 right-2 sm:top-4 sm:right-4',
-                    siteSettings.videoOverlayPosition === 'bottom-left' && 'bottom-2 left-2 sm:bottom-4 sm:left-4',
-                    siteSettings.videoOverlayPosition === 'bottom-right' && 'bottom-2 right-2 sm:bottom-4 sm:right-4',
+                    "absolute object-contain opacity-75 pointer-events-none z-30",
+                    "h-8 sm:h-10 md:h-12",
+                    (siteSettings.videoOverlayPosition === 'top-left') && 'top-2 left-2 sm:top-4 sm:left-4',
+                    (!siteSettings.videoOverlayPosition || siteSettings.videoOverlayPosition === 'top-right') && 'top-2 right-2 sm:top-4 sm:right-4',
+                    (siteSettings.videoOverlayPosition === 'bottom-left') && 'bottom-2 left-2 sm:bottom-4 sm:left-4',
+                    (siteSettings.videoOverlayPosition === 'bottom-right') && 'bottom-2 right-2 sm:bottom-4 sm:right-4',
                   ].filter(Boolean).join(' ')}
                 />
               )}
