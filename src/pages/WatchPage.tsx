@@ -1,10 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Play, Download } from 'lucide-react';
+import { ArrowLeft, Play, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fetchVideoById, Movie } from '@/lib/firebaseServices/videoService';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, SiteSettings } from '@/lib/firebaseServices/siteSettingsService';
+
+const FALLBACK_WATCH_LOGO_URL = '/defaults/default-mflix-logo.png';
 
 const WatchPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +18,18 @@ const WatchPage = () => {
   const [isWatching, setIsWatching] = useState(false);
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   
-  // Show splash screen for 3 seconds when navigating to watch page
+  useEffect(() => {
+    const loadSiteSettings = async () => {
+      try {
+        const settings = await getSiteSettings();
+        setSiteSettings(settings);
+      } catch (error) {
+        console.error('Error fetching site settings for WatchPage splash:', error);
+      }
+    };
+    loadSiteSettings();
+  }, []);
+
   useEffect(() => {
     const splashTimer = setTimeout(() => {
       setShowSplash(false);
@@ -26,30 +39,25 @@ const WatchPage = () => {
   }, []);
   
   useEffect(() => {
-    const loadMovieAndSettings = async () => {
-      if (!id && showSplash === false) {
+    const loadMovieData = async () => {
+      if (!id) {
         setLoading(false);
         toast({ title: "Error", description: "Movie ID is missing.", variant: "destructive" });
         return;
       }
       try {
         setLoading(true);
-        if (id) {
-          const fetchedMovie = await fetchVideoById(id);
-          if (fetchedMovie) {
-            setMovie(fetchedMovie);
-          } else {
-            toast({ title: 'Movie Not Found', description: 'Could not load the movie.', variant: 'destructive' });
-          }
+        const fetchedMovie = await fetchVideoById(id);
+        if (fetchedMovie) {
+          setMovie(fetchedMovie);
+        } else {
+          toast({ title: 'Movie Not Found', description: 'Could not load the movie.', variant: 'destructive' });
         }
-        const settings = await getSiteSettings();
-        setSiteSettings(settings);
-
       } catch (error) {
-        console.error('Error fetching movie or settings:', error);
+        console.error('Error fetching movie:', error);
         toast({
-          title: 'Error Loading Page Data',
-          description: 'Failed to load movie details or site settings. Please try again.',
+          title: 'Error Loading Movie Data',
+          description: 'Failed to load movie details. Please try again.',
           variant: 'destructive'
         });
       } finally {
@@ -58,34 +66,38 @@ const WatchPage = () => {
     };
     
     if (!showSplash) {
-      loadMovieAndSettings();
+      loadMovieData();
     }
   }, [id, toast, showSplash]);
 
-  // Convert Google Drive share link to preview link
   const getGoogleDrivePreviewUrl = (url: string): string => {
-    if (!url) return '#'; // Return a placeholder or handle error appropriately
+    if (!url) return '#';
     const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
     if (fileIdMatch && fileIdMatch[1]) {
       return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
     }
-    // If it's not a recognizable Google Drive share link, return the original URL
-    // Or, if it's a direct video link (e.g., .mp4), it might work directly in iframe
-    // Consider additional checks or URL type detection if needed
     return url; 
   };
 
-  // Splash screen while loading
   if (showSplash) {
+    const logoToDisplay = siteSettings?.logoUrl || FALLBACK_WATCH_LOGO_URL;
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <img 
-            src="/lovable-uploads/a177babb-70b0-43a3-9539-f3964d37f08a.png" 
-            alt="Entertainment Hub" 
-            className="w-48 h-auto mx-auto mb-4 animate-pulse"
-          />
-          <p className="text-red-500 text-xl font-bold">Loading your entertainment...</p>
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+        {logoToDisplay ? (
+            <img 
+              src={logoToDisplay} 
+              alt="Loading Logo" 
+              className="w-32 h-auto sm:w-40 md:w-48 mx-auto mb-6 animate-pulse"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          ) : (
+            <div className="h-20 mb-6"></div>
+        )}
+        <div 
+          className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"
+          role="status"
+        >
+          <span className="sr-only">Loading...</span>
         </div>
       </div>
     );
@@ -126,17 +138,14 @@ const WatchPage = () => {
     }
   };
 
-  // Use movie.videoUrl directly if it's already an embeddable link or if getGoogleDrivePreviewUrl handles other types.
-  // The Movie interface from videoService has videoUrl, ensure it holds the correct type of URL.
   const videoEmbedUrl = movie.videoUrl 
     ? (movie.videoUrl.includes('drive.google.com') 
         ? getGoogleDrivePreviewUrl(movie.videoUrl) 
         : movie.videoUrl)
-    : '#'; // Fallback if videoUrl is undefined
+    : '#';
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
       <div className="sticky top-0 z-50 bg-black/95 backdrop-blur border-b border-red-900/30">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
@@ -149,12 +158,9 @@ const WatchPage = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         {!isWatching ? (
-          // Movie Details Page
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Movie Info */}
             <div className="lg:col-span-2">
               <h1 className="text-4xl font-bold mb-4 text-white">{movie.title}</h1>
               
@@ -173,7 +179,7 @@ const WatchPage = () => {
                 <Button 
                   onClick={handleWatchNow}
                   className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 text-lg"
-                  disabled={!movie.videoUrl} // Disable if no videoUrl
+                  disabled={!movie.videoUrl}
                 >
                   <Play className="w-5 h-5 mr-2" />
                   Watch Now
@@ -189,7 +195,6 @@ const WatchPage = () => {
               </div>
             </div>
 
-            {/* Movie Poster */}
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 <img
@@ -202,27 +207,24 @@ const WatchPage = () => {
             </div>
           </div>
         ) : (
-          // Video Player
           <div className="space-y-6">
-            {/* Video Player with Overlay Capability */}
             <div className="relative">
               <div className="aspect-video w-full bg-black rounded-lg overflow-hidden shadow-2xl">
                 <iframe
-                  src={videoEmbedUrl} // Use the processed videoEmbedUrl
+                  src={videoEmbedUrl}
                   title={movie.title}
                   className="w-full h-full"
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 />
               </div>
-              {/* Video Overlay Logo */}
               {siteSettings?.videoOverlayLogoUrl && (
                 <img
                   src={siteSettings.videoOverlayLogoUrl}
                   alt="Video Overlay Logo"
                   className={[
                     'absolute object-contain opacity-75 z-30',
-                    'h-8 sm:h-10 md:h-12 lg:h-14', // Responsive height
+                    'h-8 sm:h-10 md:h-12 lg:h-14',
                     siteSettings.videoOverlayPosition === 'top-left' && 'top-2 left-2 sm:top-4 sm:left-4',
                     siteSettings.videoOverlayPosition === 'top-right' && 'top-2 right-2 sm:top-4 sm:right-4',
                     siteSettings.videoOverlayPosition === 'bottom-left' && 'bottom-2 left-2 sm:bottom-4 sm:left-4',
@@ -232,7 +234,6 @@ const WatchPage = () => {
               )}
             </div>
 
-            {/* Video Info Below Player */}
             <div className="bg-gray-900/50 rounded-lg p-6">
               <h2 className="text-2xl font-bold text-white mb-2">{movie.title}</h2>
               <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-gray-300">
