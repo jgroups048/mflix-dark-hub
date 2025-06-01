@@ -1,7 +1,27 @@
-
+import { useState, useEffect } from 'react';
 import { Youtube, Facebook, Instagram, Send } from 'lucide-react';
+import { getSiteSettings } from '@/lib/firebaseServices/siteSettingsService';
 
 const Footer = () => {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const settings = await getSiteSettings();
+        if (settings && settings.logoUrl) {
+          setLogoUrl(settings.logoUrl);
+        } else {
+          setLogoUrl(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch logo for footer:", error);
+        setLogoUrl(null);
+      }
+    };
+    fetchLogo();
+  }, []);
+
   return (
     <footer className="bg-black border-t border-red-900/30 mt-16">
       <div className="container mx-auto px-4 py-12">
@@ -10,17 +30,23 @@ const Footer = () => {
           {/* MFLIX Branding */}
           <div className="flex items-center justify-center mb-8">
             <div className="flex items-center space-x-4">
-              <img 
-                src="/lovable-uploads/8f44525e-2d28-4adb-adc9-c47803919a9f.png" 
-                alt="MFLIX" 
-                className="w-16 h-16 object-contain"
-              />
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="MFLIX Logo" 
+                  className="w-16 h-16 object-contain"
+                />
+              ) : (
+                <div className="w-16 h-16 flex items-center justify-center text-red-500 font-bold text-4xl">M</div>
+              )}
               <div>
+                {/* 
                 <h3 className="text-4xl font-bold text-red-500 tracking-wider drop-shadow-lg mb-2">
                   MFLIX
                 </h3>
-                <p className="text-white text-lg font-semibold">ENTERTAINMENT HUB</p>
-                <p className="text-gray-400 text-sm italic mt-1">Your Ultimate Entertainment Destination</p>
+                <p className="text-white text-lg font-semibold">ENTERTAINMENT HUB</p> 
+                */}
+                <p className="text-gray-400 text-sm italic mt-1 sm:mt-0 sm:ml-[-6rem]">Your Ultimate Entertainment Destination</p>
               </div>
             </div>
           </div>
@@ -72,42 +98,6 @@ const Footer = () => {
               <Send className="w-6 h-6" />
             </a>
           </div>
-        </div>
-
-        {/* Floating Social Media Buttons for Mobile */}
-        <div className="fixed bottom-4 right-4 md:hidden flex flex-col space-y-3 z-40">
-          <a 
-            href="https://www.youtube.com/@Jgroupsentertainmenthub048" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full shadow-lg"
-          >
-            <Youtube className="w-5 h-5" />
-          </a>
-          <a 
-            href="https://www.facebook.com/profile.php?id=61573079981019" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg"
-          >
-            <Facebook className="w-5 h-5" />
-          </a>
-          <a 
-            href="https://www.instagram.com/mflix_entertainmenthub?igsh=eTFrOHY4bmNnYmli" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-3 rounded-full shadow-lg"
-          >
-            <Instagram className="w-5 h-5" />
-          </a>
-          <a 
-            href="https://t.me/+nRJaGvh8DMNlMzNl" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg"
-          >
-            <Send className="w-5 h-5" />
-          </a>
         </div>
 
         {/* Footer Links */}

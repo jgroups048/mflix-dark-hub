@@ -65,8 +65,7 @@ const Header = ({ onSearch }: HeaderProps) => {
                 />
               ) : (
                 <span className="text-red-500 text-xl sm:text-2xl font-bold tracking-wider drop-shadow-lg">
-                  Entertainment<br />
-                  <span className="ml-6 sm:ml-8">Hub</span>
+                  MFLIX
                 </span>
               )}
             </div>

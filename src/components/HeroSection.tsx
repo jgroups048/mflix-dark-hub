@@ -129,22 +129,22 @@ const HeroSection = () => {
     return <div className="h-[300px] sm:h-[500px] bg-black flex items-center justify-center text-red-500 p-4 text-center">Invalid Trailer URL.</div>; // Provide feedback
   }
   
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`;
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&showinfo=0&rel=0&iv_load_policy=3&fs=0&disablekb=1`;
 
   return (
     <section className="w-full bg-black"> {/* Added bg-black here for mobile layout continuity */}
       {/* Mobile Layout: Video on top, content below */}
       <div className="sm:hidden">
         {/* Video Player Container */}
-        <div className="relative w-full aspect-video bg-black">
+        <div className="relative w-full aspect-video bg-black overflow-hidden">
           <iframe
             src={embedUrl}
             title={trailerData.movieTitle}
-            className="w-full h-full object-cover"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; muted; loop"
             allowFullScreen
-            style={{ pointerEvents: 'none' }}
+            style={{ width: 'calc(100% + 200px)', height: 'calc(100% + 200px)', pointerEvents: 'none' }}
           />
         </div>
 
@@ -185,15 +185,17 @@ const HeroSection = () => {
       {/* Desktop Layout: Overlay (existing structure) */}
       <div className="hidden sm:block relative w-full overflow-hidden aspect-video bg-black">
         {/* 2. Video iframe wrapper */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <iframe
             src={embedUrl}
             title={trailerData.movieTitle}
-            className="w-full h-full object-cover"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; muted; loop"
             allowFullScreen
             style={{ 
+              width: 'calc(100% + 200px)', 
+              height: 'calc(100% + 200px)', 
               pointerEvents: 'none',
               filter: 'brightness(0.7)'
             }}
